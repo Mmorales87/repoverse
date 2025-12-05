@@ -1,0 +1,18 @@
+
+1.  **Create a `.env` file**: In the root directory of your project (`/Users/marcmoralesgarcia/projects/RepoVerse/repoverse/`), create a new file named `.env`.
+
+2.  **Add your GitHub Token**: Open the `.env` file and add your GitHub Personal Access Token. If you don't have one, you can create it by following the instructions here: [https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token). Make sure to grant it the necessary permissions (e.g., `repo` scope for private repositories, or public `repo` data if only accessing public repos).
+    Add the token to the `.env` file like this:
+    ```
+    GITHUB_TOKEN=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+    ```
+
+3.  **Add your Bitbucket Token (if applicable)**: If you intend to use Bitbucket, you'll need to create an App password for Bitbucket and add it to the `.env` file. Instructions for creating Bitbucket App passwords can be found here: [https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/)
+    Add the token to the `.env` file like this:
+    ```
+    BITBUCKET_TOKEN=YOUR_BITBUCKET_APP_PASSWORD
+    ```
+
+4.  **Important Security Note**: **DO NOT** commit your `.env` file to version control (e.g., Git). I have already added `.env` to your `.gitignore` file to prevent accidentally exposing your tokens.
+
+After creating the `.env` file with your tokens, please restart your application.
