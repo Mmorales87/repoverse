@@ -43,8 +43,9 @@ class _WebGLCanvasState extends State<WebGLCanvas> {
     _canvas!.style.left = '0px';
     _canvas!.style.top = '0px';
     _canvas!.style.pointerEvents = 'auto'; // Canvas must receive mouse events for controls
-    _canvas!.style.zIndex = '-999'; // Very low z-index to ensure it's behind everything
+    _canvas!.style.zIndex = '999'; // High z-index so it can receive events - HUD will be on top via Flutter
     _canvas!.style.touchAction = 'none'; // Prevent default touch actions
+    _canvas!.style.userSelect = 'none'; // Prevent text selection
     _canvas!.style.display = 'block'; // Ensure it's visible
     _canvas!.style.backgroundColor = 'transparent'; // Transparent background
     _canvas!.style.margin = '0';
@@ -56,6 +57,9 @@ class _WebGLCanvasState extends State<WebGLCanvas> {
     final existingCanvas = html.document.querySelector('canvas[data-repoverse]');
     existingCanvas?.remove();
     
+    // Remove any existing canvas with same ID to prevent duplicates
+    html.document.querySelector('canvas[data-repoverse]')?.remove();
+    
     // Add identifier to canvas
     _canvas!.setAttribute('data-repoverse', 'true');
     
@@ -65,6 +69,11 @@ class _WebGLCanvasState extends State<WebGLCanvas> {
     // Force a layout recalculation to ensure canvas is properly sized
     // This is critical for WebGL context initialization
     _canvas!.offsetHeight; // Force layout calculation
+    
+    // Ensure canvas can receive mouse events
+    _canvas!.style.pointerEvents = 'auto';
+    
+    print('✅ [CANVAS] Canvas added to DOM, pointerEvents=${_canvas!.style.pointerEvents}');
     
     // Small delay to ensure DOM is updated
     Future.delayed(const Duration(milliseconds: 50), () {

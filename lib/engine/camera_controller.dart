@@ -103,7 +103,13 @@ class CameraController {
   }
 
   void _setupMouseControls() {
-    if (_canvas == null) return;
+    if (_canvas == null) {
+      print('⚠️ [CAMERA] Cannot setup mouse controls: canvas is null');
+      return;
+    }
+    
+    final canvasId = _canvas!.id;
+    print('✅ [CAMERA] Setting up mouse controls on canvas: ${canvasId.isNotEmpty ? canvasId : "no-id"}');
 
     // Reset state
     _isDragging = false;
@@ -112,12 +118,18 @@ class CameraController {
     _lastMouseY = 0;
 
     _canvas!.onMouseDown.listen((event) {
+      print('🖱️ [CAMERA] Mouse down on canvas: button=${event.button}');
+      event.preventDefault(); // Prevent default behavior
+      event.stopPropagation(); // Prevent event from bubbling up
+      
       if (event.button == 0) {
         // Left click - rotate
         _isDragging = true;
+        print('   [CAMERA] Left click - starting drag');
       } else if (event.button == 2) {
-        // Right click - pan
+        // Right click - pan (or two-finger click on Mac)
         _isRightClickDragging = true;
+        print('   [CAMERA] Right click - starting pan');
       }
       _lastMouseX = event.client.x.toDouble();
       _lastMouseY = event.client.y.toDouble();
@@ -128,13 +140,17 @@ class CameraController {
       _isRightClickDragging = false;
     });
 
-    // Prevent context menu on right click
+    // Prevent context menu on right click - CRITICAL for pan to work
     _canvas!.onContextMenu.listen((event) {
       event.preventDefault();
+      event.stopPropagation();
+      print('🖱️ [CAMERA] Context menu prevented');
     });
 
     html.document.onMouseMove.listen((event) {
       if (_camera == null) return;
+      
+      if (!_isDragging && !_isRightClickDragging) return; // Only process if dragging
 
       final deltaX = event.client.x.toDouble() - _lastMouseX;
       final deltaY = event.client.y.toDouble() - _lastMouseY;
@@ -220,8 +236,12 @@ class CameraController {
     // Zoom with mouse wheel
     _canvas!.onWheel.listen((event) {
       if (_camera == null) return;
+      
+      print('🖱️ [CAMERA] Mouse wheel: deltaY=${event.deltaY}');
 
       final delta = event.deltaY > 0 ? 1.1 : 0.9;
+      event.preventDefault(); // Prevent page scroll
+      event.stopPropagation(); // Prevent event from bubbling up
       _sphericalRadius *= delta;
       _sphericalRadius = _sphericalRadius.clamp(_minDistance, _maxDistance);
 

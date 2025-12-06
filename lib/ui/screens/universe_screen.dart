@@ -503,11 +503,14 @@ class _UniverseScreenState extends State<UniverseScreen> {
           // 3D Canvas - Behind everything
           // Canvas is added directly to document.body with z-index -999
           // This widget is just a placeholder to trigger initialization
-          // Don't use IgnorePointer - let events pass through to canvas
+          // Use IgnorePointer to ensure events pass through to the actual HTML canvas
           Positioned.fill(
-            child: WebGLCanvas(
-              onCanvasReady: _onCanvasReady,
-              child: const SizedBox.expand(),
+            child: IgnorePointer(
+              ignoring: true, // This Flutter widget ignores events - the HTML canvas handles them
+              child: WebGLCanvas(
+                onCanvasReady: _onCanvasReady,
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
           // Error overlay if Three.js failed

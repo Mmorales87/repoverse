@@ -18,58 +18,58 @@ class HUDOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Flutter widgets are automatically rendered above HTML canvas
-    // Use Material with high elevation to ensure HUD is above canvas
-    // Stack only contains positioned elements, so empty areas allow events through
-    return Material(
-      type: MaterialType.transparency,
-      elevation: 1000, // Very high elevation to ensure it's above canvas
-      child: Stack(
-        clipBehavior: Clip.none, // Allow widgets to overflow if needed
-        children: [
+    // HUD overlay - only positioned elements, no full-screen blocking
+    // Stack with positioned elements allows events to pass through empty areas
+    return Stack(
+      clipBehavior: Clip.none, // Allow widgets to overflow if needed
+      children: [
         // Top-left: User info and stats
         Positioned(
           top: 16,
           left: 16,
           child: SafeArea(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    '📊 Statistics',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildStatRow('Total Repos ', '${stats['totalRepos'] ?? 0}'),
-                  _buildStatRow('Commits ', '${stats['totalCommits'] ?? 0}'),
-                  _buildStatRow('Stars ', '${stats['totalStars'] ?? 0}'),
-                  _buildStatRow('Forks ', '${stats['totalForks'] ?? 0}'),
-                  if (stats['mostActiveRepo'] != null) ...[
-                    const SizedBox(height: 8),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 8),
-                    Text(
-                      '⭐ Most Active: ${(stats['mostActiveRepo'] as RepositoryData).name}',
-                      style: const TextStyle(
-                        color: Colors.indigoAccent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+            child: Material(
+              type: MaterialType.transparency,
+              elevation: 1000, // High elevation to be above canvas
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '📊 Statistics',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    _buildStatRow('Total Repos ', '${stats['totalRepos'] ?? 0}'),
+                    _buildStatRow('Commits ', '${stats['totalCommits'] ?? 0}'),
+                    _buildStatRow('Stars ', '${stats['totalStars'] ?? 0}'),
+                    _buildStatRow('Forks ', '${stats['totalForks'] ?? 0}'),
+                    if (stats['mostActiveRepo'] != null) ...[
+                      const SizedBox(height: 8),
+                      const Divider(color: Colors.white24),
+                      const SizedBox(height: 8),
+                      Text(
+                        '⭐ Most Active: ${(stats['mostActiveRepo'] as RepositoryData).name}',
+                        style: const TextStyle(
+                          color: Colors.indigoAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -79,55 +79,59 @@ class HUDOverlay extends StatelessWidget {
           bottom: 0,
           left: 0,
           child: SafeArea(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              constraints: const BoxConstraints(maxWidth: 300),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    '🗺️ Legend',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+            child: Material(
+              type: MaterialType.transparency,
+              elevation: 1000, // High elevation to be above canvas
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                constraints: const BoxConstraints(maxWidth: 300),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '🗺️ Legend',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLegendItem(
-                    '☀️ Golden Sphere',
-                    'User/Organization (center)',
-                  ),
-                  _buildLegendItem(
-                    '🟣 Colored Spheres',
-                    'Repositories (color = language)',
-                  ),
-                  _buildLegendItem(
-                    '🌙 Small Gray Spheres',
-                    'Forks (moons orbiting planets)',
-                  ),
-                  _buildLegendItem(
-                    '💍 Colored Rings',
-                    'Branches (complexity, based on commits)',
-                  ),
-                  _buildLegendItem('✨ White Dots', 'Stars in the background'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '💡 Tip: Left-click drag to rotate, scroll to zoom, right-click drag to pan',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                      fontStyle: FontStyle.italic,
+                    const SizedBox(height: 12),
+                    _buildLegendItem(
+                      '☀️ Golden Sphere',
+                      'User/Organization (center)',
                     ),
-                  ),
-                ],
+                    _buildLegendItem(
+                      '🟣 Colored Spheres',
+                      'Repositories (color = language)',
+                    ),
+                    _buildLegendItem(
+                      '🌙 Small Gray Spheres',
+                      'Forks (moons orbiting planets)',
+                    ),
+                    _buildLegendItem(
+                      '💍 Colored Rings',
+                      'Branches (complexity, based on commits)',
+                    ),
+                    _buildLegendItem('✨ White Dots', 'Stars in the background'),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '💡 Tip: Left-click drag to rotate, scroll to zoom, right-click drag to pan',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -137,16 +141,20 @@ class HUDOverlay extends StatelessWidget {
           top: 16,
           right: 16,
           child: SafeArea(
-            child: ElevatedButton.icon(
-              onPressed: () => _showShareCard(context),
-              icon: const Icon(Icons.share),
-              label: const Text('Share Card'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+            child: Material(
+              type: MaterialType.transparency,
+              elevation: 1000, // High elevation to be above canvas
+              child: ElevatedButton.icon(
+                onPressed: () => _showShareCard(context),
+                icon: const Icon(Icons.share),
+                label: const Text('Share Card'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -157,15 +165,18 @@ class HUDOverlay extends StatelessWidget {
           bottom: 16,
           right: 16,
           child: SafeArea(
-            child: FloatingActionButton(
-              onPressed: onResetCamera,
-              backgroundColor: Colors.indigo,
-              child: const Icon(Icons.refresh),
+            child: Material(
+              type: MaterialType.transparency,
+              elevation: 1000, // High elevation to be above canvas
+              child: FloatingActionButton(
+                onPressed: onResetCamera,
+                backgroundColor: Colors.indigo,
+                child: const Icon(Icons.refresh),
+              ),
             ),
           ),
         ),
       ],
-      ),
     );
   }
 
