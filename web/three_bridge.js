@@ -182,14 +182,38 @@
     // Convert parameters object to proper Three.js material options
     var opts = {};
     // Handle both JS objects and Dart Maps (which come as objects)
-    // Color can be a number (hex) - Three.js accepts it directly
-    if (parameters.color !== undefined) {
-      opts.color = parameters.color;
-      console.log('[BRIDGE] Material color set to:', parameters.color, 'type:', typeof parameters.color);
+    // Color can be a number (hex) - Three.js accepts it directly, but we'll use Color constructor for safety
+    if (parameters.color !== undefined && parameters.color !== null) {
+      // Ensure color is a number (hex value)
+      var colorValue = typeof parameters.color === 'number' 
+        ? parameters.color 
+        : parseInt(parameters.color, 10);
+      
+      // Ensure color is a proper 24-bit integer (0xRRGGBB format)
+      colorValue = colorValue & 0xFFFFFF; // Mask to ensure 24-bit
+      
+      // Use THREE.Color constructor - it accepts numbers directly (0xRRGGBB format)
+      var colorObj = new THREE.Color(colorValue);
+      opts.color = colorObj;
+      
+      // Verify the color was set correctly
+      console.log('[BRIDGE] Material color INPUT:', colorValue, '(0x' + colorValue.toString(16).toUpperCase().padStart(6, '0') + ')');
+      console.log('[BRIDGE] Material color RGB:', colorObj.r.toFixed(3), colorObj.g.toFixed(3), colorObj.b.toFixed(3));
+      console.log('[BRIDGE] Material color HEX from object:', colorObj.getHexString());
     }
-    if (parameters.emissive !== undefined) {
-      opts.emissive = parameters.emissive;
-      console.log('[BRIDGE] Material emissive set to:', parameters.emissive);
+    if (parameters.emissive !== undefined && parameters.emissive !== null) {
+      var emissiveValue = typeof parameters.emissive === 'number' 
+        ? parameters.emissive 
+        : parseInt(parameters.emissive, 10);
+      
+      // Ensure emissive is a proper 24-bit integer
+      emissiveValue = emissiveValue & 0xFFFFFF;
+      
+      // Use THREE.Color constructor to ensure proper color object
+      var emissiveObj = new THREE.Color(emissiveValue);
+      opts.emissive = emissiveObj;
+      console.log('[BRIDGE] Material emissive INPUT:', emissiveValue, '(0x' + emissiveValue.toString(16).toUpperCase().padStart(6, '0') + ')');
+      console.log('[BRIDGE] Material emissive RGB:', emissiveObj.r.toFixed(3), emissiveObj.g.toFixed(3), emissiveObj.b.toFixed(3));
     }
     if (parameters.emissiveIntensity !== undefined) opts.emissiveIntensity = parameters.emissiveIntensity;
     if (parameters.roughness !== undefined) opts.roughness = parameters.roughness;
@@ -197,9 +221,62 @@
     if (parameters.transparent !== undefined) opts.transparent = parameters.transparent;
     if (parameters.opacity !== undefined) opts.opacity = parameters.opacity;
     if (parameters.side !== undefined) opts.side = parameters.side;
-    console.log('[BRIDGE] Creating MeshStandardMaterial with options:', opts);
+    
     var material = new THREE.MeshStandardMaterial(opts);
-    console.log('[BRIDGE] Material created, color:', material.color.getHexString());
+    // Debug: Log material properties AFTER creation
+    try {
+      var colorHex = 'undefined';
+      var emissiveHex = 'undefined';
+      var colorRGB = 'undefined';
+      
+      if (material.color) {
+        try {
+          // Try getHexString() first, fallback to getHex() if it doesn't exist
+          if (typeof material.color.getHexString === 'function') {
+            colorHex = '0x' + material.color.getHexString();
+          } else if (typeof material.color.getHex === 'function') {
+            colorHex = '0x' + material.color.getHex().toString(16).toUpperCase().padStart(6, '0');
+          } else {
+            // Calculate hex from RGB values
+            var r = Math.round(material.color.r * 255);
+            var g = Math.round(material.color.g * 255);
+            var b = Math.round(material.color.b * 255);
+            colorHex = '0x' + ((r << 16) | (g << 8) | b).toString(16).toUpperCase().padStart(6, '0');
+          }
+          colorRGB = 'RGB(' + Math.round(material.color.r * 255) + ',' + Math.round(material.color.g * 255) + ',' + Math.round(material.color.b * 255) + ')';
+        } catch (e) {
+          colorHex = 'error: ' + e.message;
+          colorRGB = 'R:' + (material.color.r ? material.color.r.toFixed(3) : '?') + ' G:' + (material.color.g ? material.color.g.toFixed(3) : '?') + ' B:' + (material.color.b ? material.color.b.toFixed(3) : '?');
+        }
+      }
+      
+      if (material.emissive) {
+        try {
+          if (typeof material.emissive.getHexString === 'function') {
+            emissiveHex = '0x' + material.emissive.getHexString();
+          } else if (typeof material.emissive.getHex === 'function') {
+            emissiveHex = '0x' + material.emissive.getHex().toString(16).toUpperCase().padStart(6, '0');
+          } else {
+            var r = Math.round(material.emissive.r * 255);
+            var g = Math.round(material.emissive.g * 255);
+            var b = Math.round(material.emissive.b * 255);
+            emissiveHex = '0x' + ((r << 16) | (g << 8) | b).toString(16).toUpperCase().padStart(6, '0');
+          }
+        } catch (e) {
+          emissiveHex = 'error: ' + e.message;
+        }
+      }
+      
+      console.log('[BRIDGE] Material CREATED - Final color:', colorHex, colorRGB);
+      console.log('[BRIDGE] Material emissive:', emissiveHex);
+      if (material.roughness !== undefined) {
+        console.log('[BRIDGE] Material properties - roughness:', material.roughness, 'metalness:', material.metalness, 'emissiveIntensity:', material.emissiveIntensity);
+      } else {
+        console.log('[BRIDGE] Material is MeshBasicMaterial (no lighting properties)');
+      }
+    } catch (e) {
+      console.error('[BRIDGE] Error logging material properties:', e);
+    }
     return material;
   };
 
@@ -211,9 +288,15 @@
     // Convert parameters object to proper Three.js material options
     var opts = {};
     if (parameters) {
-      if (parameters.color !== undefined) {
-        opts.color = parameters.color;
-        console.log('[BRIDGE] BasicMaterial color set to:', parameters.color);
+      if (parameters.color !== undefined && parameters.color !== null) {
+        var colorValue = typeof parameters.color === 'number' 
+          ? parameters.color 
+          : parseInt(parameters.color, 10);
+        colorValue = colorValue & 0xFFFFFF; // Mask to ensure 24-bit
+        var colorObj = new THREE.Color(colorValue);
+        opts.color = colorObj;
+        console.log('[BRIDGE] BasicMaterial color INPUT:', colorValue, '(0x' + colorValue.toString(16).toUpperCase().padStart(6, '0') + ')');
+        console.log('[BRIDGE] BasicMaterial color RGB:', colorObj.r.toFixed(3), colorObj.g.toFixed(3), colorObj.b.toFixed(3));
       }
       if (parameters.transparent !== undefined) opts.transparent = parameters.transparent;
       if (parameters.opacity !== undefined) opts.opacity = parameters.opacity;
@@ -221,7 +304,15 @@
     }
     var material = new THREE.MeshBasicMaterial(opts);
     if (parameters && parameters.color !== undefined) {
-      console.log('[BRIDGE] BasicMaterial created, color:', material.color.getHexString());
+      try {
+        var colorHex = '0x' + material.color.getHexString();
+        console.log('[BRIDGE] BasicMaterial CREATED - Final color:', colorHex);
+      } catch (e) {
+        console.log('[BRIDGE] BasicMaterial CREATED - Color RGB:', 
+          Math.round(material.color.r * 255) + ',' + 
+          Math.round(material.color.g * 255) + ',' + 
+          Math.round(material.color.b * 255));
+      }
     }
     return material;
   };

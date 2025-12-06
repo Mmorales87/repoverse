@@ -20,11 +20,31 @@ class CameraController {
   double _minPolarAngle = 0.1; // Limit vertical angle (2.5D style)
   double _maxPolarAngle = 1.4; // ~80 degrees
 
+  // Spherical coordinates for camera control
+  double _sphericalTheta = 0.0; // Horizontal angle
+  double _sphericalPhi = 1.0; // Vertical angle (limited)
+  double _sphericalRadius = 50.0;
+  JSObject? _target; // Camera target for panning
+
   /// Initialize the camera
   /// Ensures Three.js is loaded before creating the camera
-  Future<void> initialize(html.CanvasElement canvas) async {
+  /// [systemSize] is the total size of the system (max orbit radius + planet radius + margin)
+  /// This ensures the camera is positioned to see the entire system
+  Future<void> initialize(html.CanvasElement canvas, {double systemSize = 200.0}) async {
     await ensureThreeLoaded();
     _canvas = canvas;
+
+    // Calculate optimal camera distance based on actual system size
+    // Camera should be far enough to see the entire system with good framing
+    // Use 2.5x the system size for optimal viewing (increased from 1.8x)
+    final calculatedDistance = systemSize * 2.5;
+    _initialDistance = calculatedDistance.clamp(150.0, 1500.0); // Clamp between 150 and 1500
+    _sphericalRadius = _initialDistance;
+    
+    print('   [DEBUG] Camera initialization:');
+    print('      System size: $systemSize');
+    print('      Calculated distance: $calculatedDistance');
+    print('      Final distance: $_initialDistance');
 
     // Create perspective camera
     final aspect = canvas.width! / canvas.height!;
@@ -35,8 +55,16 @@ class CameraController {
       throw Exception('Failed to create camera - PerspectiveCamera returned null');
     }
 
+    // Initialize spherical coordinates
+    _sphericalTheta = 0.0;
+    _sphericalPhi = 1.0;
+    _target = Vector3(0, 0, 0);
+
     // Set initial camera position (orbital style) using safe bridge helper
-    setCameraPosition(_camera! as JSAny, 0.0, 30.0, _initialDistance);
+    // Height scales with distance for better viewing angle
+    // Use a higher angle to see more of the scene
+    final cameraHeight = _initialDistance * 0.4; // Lower angle to see more planets
+    setCameraPosition(_camera! as JSAny, 0.0, cameraHeight, _initialDistance);
 
     // Look at origin using safe bridge helper
     cameraLookAt(_camera! as JSAny, 0.0, 0.0, 0.0);
@@ -70,50 +98,111 @@ class CameraController {
     if (_canvas == null) return;
 
     bool _isDragging = false;
+    bool _isRightClickDragging = false; // For panning
     double _lastMouseX = 0;
     double _lastMouseY = 0;
-    double _sphericalTheta = 0.0; // Horizontal angle
-    double _sphericalPhi = 1.0; // Vertical angle (limited)
-    double _sphericalRadius = _initialDistance;
 
     _canvas!.onMouseDown.listen((event) {
-      _isDragging = true;
+      if (event.button == 0) {
+        // Left click - rotate
+        _isDragging = true;
+      } else if (event.button == 2) {
+        // Right click - pan
+        _isRightClickDragging = true;
+      }
       _lastMouseX = event.client.x.toDouble();
       _lastMouseY = event.client.y.toDouble();
     });
 
     html.document.onMouseUp.listen((event) {
       _isDragging = false;
+      _isRightClickDragging = false;
+    });
+
+    // Prevent context menu on right click
+    _canvas!.onContextMenu.listen((event) {
+      event.preventDefault();
     });
 
     html.document.onMouseMove.listen((event) {
-      if (!_isDragging || _camera == null) return;
+      if (_camera == null) return;
 
       final deltaX = event.client.x.toDouble() - _lastMouseX;
       final deltaY = event.client.y.toDouble() - _lastMouseY;
 
-      _sphericalTheta -= deltaX * 0.01;
-      _sphericalPhi += deltaY * 0.01;
+      if (_isDragging) {
+        // Rotate camera around target
+        _sphericalTheta -= deltaX * 0.01;
+        _sphericalPhi += deltaY * 0.01;
 
-      // Limit vertical angle (2.5D style)
-      _sphericalPhi = _sphericalPhi.clamp(_minPolarAngle, _maxPolarAngle);
+        // Limit vertical angle (2.5D style)
+        _sphericalPhi = _sphericalPhi.clamp(_minPolarAngle, _maxPolarAngle);
 
-      // Update camera position (spherical coordinates)
-      final x =
-          _sphericalRadius *
-          math.sin(_sphericalPhi) *
-          math.cos(_sphericalTheta);
-      final y = _sphericalRadius * math.cos(_sphericalPhi);
-      final z =
-          _sphericalRadius *
-          math.sin(_sphericalPhi) *
-          math.sin(_sphericalTheta);
+        // Update camera position (spherical coordinates)
+        if (_target == null) {
+          _target = Vector3(0, 0, 0);
+        }
+        final targetX = Vector3Extension(_target!).x;
+        final targetY = Vector3Extension(_target!).y;
+        final targetZ = Vector3Extension(_target!).z;
 
-      // Update position using safe bridge helper
-      setCameraPosition(_camera! as JSAny, x, y, z);
+        final x = targetX +
+            _sphericalRadius *
+                math.sin(_sphericalPhi) *
+                math.cos(_sphericalTheta);
+        final y = targetY + _sphericalRadius * math.cos(_sphericalPhi);
+        final z = targetZ +
+            _sphericalRadius *
+                math.sin(_sphericalPhi) *
+                math.sin(_sphericalTheta);
 
-      // Look at origin using safe bridge helper
-      cameraLookAt(_camera! as JSAny, 0.0, 0.0, 0.0);
+        // Update position using safe bridge helper
+        setCameraPosition(_camera! as JSAny, x, y, z);
+
+        // Look at target using safe bridge helper
+        cameraLookAt(_camera! as JSAny, targetX, targetY, targetZ);
+      } else if (_isRightClickDragging) {
+        // Pan camera (move target)
+        if (_target == null) {
+          _target = Vector3(0, 0, 0);
+        }
+        final panSpeed = _sphericalRadius * 0.001;
+        final rightX = math.cos(_sphericalTheta);
+        final rightZ = math.sin(_sphericalTheta);
+
+        // Calculate pan direction
+        final panX = -rightX * deltaX * panSpeed;
+        final panY = deltaY * panSpeed;
+        final panZ = -rightZ * deltaX * panSpeed;
+
+        // Update target using bridge helper
+        final currentTargetX = Vector3Extension(_target!).x;
+        final currentTargetY = Vector3Extension(_target!).y;
+        final currentTargetZ = Vector3Extension(_target!).z;
+        _target = Vector3(
+          currentTargetX + panX,
+          currentTargetY + panY,
+          currentTargetZ + panZ,
+        );
+
+        // Update camera position relative to new target
+        final targetX = Vector3Extension(_target!).x;
+        final targetY = Vector3Extension(_target!).y;
+        final targetZ = Vector3Extension(_target!).z;
+
+        final x = targetX +
+            _sphericalRadius *
+                math.sin(_sphericalPhi) *
+                math.cos(_sphericalTheta);
+        final y = targetY + _sphericalRadius * math.cos(_sphericalPhi);
+        final z = targetZ +
+            _sphericalRadius *
+                math.sin(_sphericalPhi) *
+                math.sin(_sphericalTheta);
+
+        setCameraPosition(_camera! as JSAny, x, y, z);
+        cameraLookAt(_camera! as JSAny, targetX, targetY, targetZ);
+      }
 
       _lastMouseX = event.client.x.toDouble();
       _lastMouseY = event.client.y.toDouble();
@@ -127,19 +216,27 @@ class CameraController {
       _sphericalRadius *= delta;
       _sphericalRadius = _sphericalRadius.clamp(_minDistance, _maxDistance);
 
-      // Update camera position (spherical coordinates)
-      final x =
+      // Update camera position relative to target
+      if (_target == null) {
+        _target = Vector3(0, 0, 0);
+      }
+      final targetX = Vector3Extension(_target!).x;
+      final targetY = Vector3Extension(_target!).y;
+      final targetZ = Vector3Extension(_target!).z;
+
+      final x = targetX +
           _sphericalRadius *
-          math.sin(_sphericalPhi) *
-          math.cos(_sphericalTheta);
-      final y = _sphericalRadius * math.cos(_sphericalPhi);
-      final z =
+              math.sin(_sphericalPhi) *
+              math.cos(_sphericalTheta);
+      final y = targetY + _sphericalRadius * math.cos(_sphericalPhi);
+      final z = targetZ +
           _sphericalRadius *
-          math.sin(_sphericalPhi) *
-          math.sin(_sphericalTheta);
+              math.sin(_sphericalPhi) *
+              math.sin(_sphericalTheta);
 
       // Update position using safe bridge helper
       setCameraPosition(_camera! as JSAny, x, y, z);
+      cameraLookAt(_camera! as JSAny, targetX, targetY, targetZ);
     });
   }
 
@@ -147,8 +244,15 @@ class CameraController {
   void reset() {
     if (_camera == null) return;
 
-    // Update position using safe bridge helper
-    setCameraPosition(_camera! as JSAny, 0.0, 30.0, _initialDistance);
+    // Reset spherical coordinates
+    _sphericalTheta = 0.0;
+    _sphericalPhi = 1.0;
+    _sphericalRadius = _initialDistance;
+    _target = Vector3(0, 0, 0);
+
+    // Update position using safe bridge helper (use calculated height)
+    final cameraHeight = _initialDistance * 0.6;
+    setCameraPosition(_camera! as JSAny, 0.0, cameraHeight, _initialDistance);
 
     // Look at origin using safe bridge helper
     cameraLookAt(_camera! as JSAny, 0.0, 0.0, 0.0);

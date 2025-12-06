@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../core/models/repository_data.dart';
+import '../widgets/galaxy_background.dart';
 
 /// Screen that displays user data before loading the 3D universe
 class UserDataScreen extends StatelessWidget {
@@ -17,10 +19,24 @@ class UserDataScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+      backgroundColor: Colors.transparent, // Transparent so galaxy shows
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Galaxy background (behind everything)
+          GalaxyBackground(
+            density: 0.4,
+            speed: 1.0,
+            mouseInteraction: true,
+            mouseRepulsion: true,
+            child: const SizedBox.shrink(), // Empty child, canvas is added to DOM
+          ),
+          // Content on top
+          Container(
+            color: Colors.black.withOpacity(0.4), // Subtle overlay for readability
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -77,7 +93,10 @@ class UserDataScreen extends StatelessWidget {
               const SizedBox(height: 32),
             ],
           ),
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -100,13 +119,20 @@ class UserDataScreen extends StatelessWidget {
           runSpacing: 16,
           children: [
             _buildStatCard(
-              'Total Repos',
-              '${repositories.length}',
+              'Own Repos',
+              '${stats['totalRepos'] ?? 0}',
               Icons.folder,
               Colors.blue,
             ),
+            if ((stats['forkCount'] as int? ?? 0) > 0)
+              _buildStatCard(
+                'Forks',
+                '${stats['forkCount'] ?? 0}',
+                Icons.call_split,
+                Colors.grey,
+              ),
             _buildStatCard(
-              'Total Commits',
+              'My Commits',
               '${stats['totalCommits'] ?? 0}',
               Icons.commit,
               Colors.green,
@@ -118,22 +144,10 @@ class UserDataScreen extends StatelessWidget {
               Colors.amber,
             ),
             _buildStatCard(
-              'Total Forks',
-              '${stats['totalForks'] ?? 0}',
-              Icons.call_split,
-              Colors.purple,
-            ),
-            _buildStatCard(
               'Languages',
-              '${stats['uniqueLanguages']?.length ?? 0}',
+              '${(stats['languages'] as Map<String, dynamic>?)?.length ?? 0}',
               Icons.code,
               Colors.orange,
-            ),
-            _buildStatCard(
-              'Activity Score',
-              '${(stats['averageActivityScore'] ?? 0.0).toStringAsFixed(1)}',
-              Icons.trending_up,
-              Colors.red,
             ),
           ],
         ),
@@ -184,11 +198,15 @@ class UserDataScreen extends StatelessWidget {
   }
 
   Widget _buildRepositoriesSection() {
+    // Separate own repos and forks
+    final ownRepos = repositories.where((r) => !r.isFork).toList();
+    final forkRepos = repositories.where((r) => r.isFork).toList();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Repositories',
+          'My Repositories',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -196,30 +214,71 @@ class UserDataScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...repositories.take(20).map((repo) => _buildRepoCard(repo)),
-        if (repositories.length > 20)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              '... and ${repositories.length - 20} more repositories',
-              style: const TextStyle(color: Colors.grey),
-            ),
+        // Masonry grid for own repositories - responsive (1 column on mobile, 2 on tablet/desktop)
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 600 ? 1 : 2;
+            return MasonryGridView.count(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              itemCount: ownRepos.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) => _buildRepoCard(ownRepos[index], isFork: false),
+            );
+          },
+        ),
+        if (forkRepos.isNotEmpty) ...[
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              const Icon(Icons.call_split, color: Colors.grey, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Forked Repositories',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+          // Masonry grid for forks (with different styling) - responsive
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = constraints.maxWidth < 600 ? 1 : 2;
+              return MasonryGridView.count(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                itemCount: forkRepos.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemBuilder: (context, index) => _buildRepoCard(forkRepos[index], isFork: true),
+              );
+            },
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildRepoCard(RepositoryData repo) {
+  Widget _buildRepoCard(RepositoryData repo, {bool isFork = false}) {
     final primaryLang = repo.primaryLanguage ?? 'Unknown';
     final langPercentages = repo.languagePercentages;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: isFork ? Colors.grey[850] : Colors.grey[900],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(
+          color: isFork ? Colors.grey[700]! : Colors.grey[800]!,
+          width: isFork ? 1 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,13 +288,30 @@ class UserDataScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   repo.name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isFork ? Colors.grey[400] : Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+              if (isFork)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'FORK',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

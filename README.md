@@ -6,6 +6,40 @@ Your Git Universe. Reimagined - 3D visualization of GitHub and Bitbucket reposit
 
 RepoVerse is a Flutter Web application that creates a beautiful 3D universe visualization of your GitHub and Bitbucket repositories. Each repository becomes a planet orbiting in space, with visualizations based on repository activity, languages, and other metrics.
 
+## Visual Design
+
+The 3D universe uses a rich visual language to represent different repository metrics:
+
+| Elemento           | Representa           | Función visual                       |
+|-------------------|---------------------|-------------------------------------|
+| Repo              | Planeta            | Unidad central, punto de interacción |
+| Commits totales   | Tamaño / masa      | Evolución y actividad global        |
+| Forks             | Lunas              | Popularidad / difusión              |
+| Branches          | Anillos            | Complejidad interna                 |
+| Releases          | Anillos o cápsulas | Hitos importantes                   |
+| PRs               | Satélites          | Cambios en revisión                 |
+| Issues            | Tormentas / manchas| Problemas pendientes                |
+| Watchers          | Halo / brillo      | Atención / popularidad              |
+| Contributors      | Partículas / lunas | Comunidad y colaboración            |
+| Lenguaje principal| Color / material   | Diferenciación rápida               |
+| Actividad reciente| Velocidad / pulso  | Dinamismo / ritmo                   |
+| Edad              | Radio orbital      | Timeline espacial                    |
+
+### Current Implementation
+
+Currently implemented visual elements:
+- **Planets (Repositories)**: Colored spheres representing repositories, with color based on primary programming language
+- **Moons (Forks)**: Small gray spheres orbiting around planets, representing the number of forks
+- **Rings (Branches)**: Semi-transparent colored rings around planets, representing complexity (based on commit count as a proxy for branches)
+- **Stars**: White dots in the background creating a starfield effect
+
+### Controls
+
+- **Left-click + Drag**: Rotate the camera around the scene
+- **Right-click + Drag**: Pan the camera (move the view)
+- **Scroll Wheel**: Zoom in/out
+- **Reset Button**: Return camera to initial position
+
 ## Getting Started
 
 ### Prerequisites

@@ -65,50 +65,58 @@ class RepositoryAggregator {
   }
 
   /// Get aggregated statistics from repositories
+  /// Excludes forks from commits and languages calculations
   Map<String, dynamic> getAggregatedStats(List<RepositoryData> repositories) {
-    final totalCommits = repositories.fold<int>(
+    // Separate forks from own repositories
+    final ownRepos = repositories.where((repo) => !repo.isFork).toList();
+    final forkRepos = repositories.where((repo) => repo.isFork).toList();
+    
+    // Calculate stats only from own repositories (exclude forks)
+    final totalCommits = ownRepos.fold<int>(
       0,
       (sum, repo) => sum + repo.totalCommits,
     );
-    final totalStars = repositories.fold<int>(
+    final totalStars = ownRepos.fold<int>(
       0,
       (sum, repo) => sum + repo.stars,
     );
-    final totalForks = repositories.fold<int>(
+    final totalForks = ownRepos.fold<int>(
       0,
       (sum, repo) => sum + repo.forks,
     );
 
-    // Aggregate languages
+    // Aggregate languages only from own repositories
     final languageMap = <String, int>{};
-    for (final repo in repositories) {
+    for (final repo in ownRepos) {
       repo.languages.forEach((lang, bytes) {
         languageMap[lang] = (languageMap[lang] ?? 0) + bytes;
       });
     }
 
-    // Find most active repository
-    final mostActiveRepo = repositories.isNotEmpty
-        ? repositories.reduce(
+    // Find most active repository (only from own repos)
+    final mostActiveRepo = ownRepos.isNotEmpty
+        ? ownRepos.reduce(
             (a, b) => a.activityScore > b.activityScore ? a : b,
           )
         : null;
 
-    // Count by source
-    final githubCount = repositories.where((r) => r.source == 'github').length;
-    final bitbucketCount = repositories
-        .where((r) => r.source == 'bitbucket')
-        .length;
+    // Count by source (separate own repos and forks)
+    final githubCount = ownRepos.where((r) => r.source == 'github').length;
+    final bitbucketCount = ownRepos.where((r) => r.source == 'bitbucket').length;
+    final forkCount = forkRepos.length;
 
     return {
-      'totalRepos': repositories.length,
-      'totalCommits': totalCommits,
+      'totalRepos': ownRepos.length, // Only count own repos
+      'totalCommits': totalCommits, // Only commits from own repos
       'totalStars': totalStars,
       'totalForks': totalForks,
-      'languages': languageMap,
+      'languages': languageMap, // Only languages from own repos
       'mostActiveRepo': mostActiveRepo,
       'githubCount': githubCount,
       'bitbucketCount': bitbucketCount,
+      'forkCount': forkCount, // Number of forks
+      'allRepos': repositories, // Include all repos (for 3D visualization)
+      'ownRepos': ownRepos, // Only own repos
     };
   }
 }

@@ -12,6 +12,9 @@ import '../../engine/generators/planet_generator.dart';
 import '../../engine/generators/orbit_generator.dart';
 // import '../../engine/generators/nebula_generator.dart'; // Disabled - looked like white squares
 import '../../engine/generators/misc_objects_generator.dart';
+import '../../engine/generators/moon_generator.dart';
+import '../../engine/generators/ring_generator.dart';
+import '../../engine/generators/sun_generator.dart';
 import '../../engine/effects/star_flicker.dart';
 import '../../engine/effects/particle_drift.dart';
 import '../../core/models/repository_data.dart';
@@ -41,12 +44,20 @@ class _UniverseScreenState extends State<UniverseScreen> {
   final ParticleDrift _particleDrift = ParticleDrift();
 
   final List<JSObject> _planets = [];
-  final List<JSObject> _orbits = [];
+  final List<JSObject> _orbits = []; // Orbit rings (very subtle)
+  final List<List<JSObject>> _moons = []; // Moons for each planet (forks)
+  final List<List<JSObject>> _rings = []; // Rings for each planet (branches)
+  // Store planet animation data (rotation speed, translation speed)
+  final Map<int, _PlanetAnimationData> _planetAnimations = {};
   JSObject? _starfield;
   JSObject? _easterEgg;
+  JSObject? _sun; // Sun at center
+  JSObject? _sunHalo; // Halo around sun
+  List<JSObject> _sunParticles = []; // Particles radiating from sun
+  double _sunPulsePhase = 0.0; // For pulse animation
 
-  bool _isInitialized = false;
   bool _threeJsError = false;
+  bool _isInitialized = false;
   String? _errorMessage;
   int? _animationFrameId;
   final Clock _clock = Clock();
@@ -106,8 +117,14 @@ class _UniverseScreenState extends State<UniverseScreen> {
       await _sceneManager.initialize();
       print('   [DEBUG] Initializing renderer...');
       await _renderer.initialize(canvas);
+      // Calculate system size for camera initialization
+      final maxOrbitRadius = OrbitGenerator.calculateOrbitRadius(widget.repositories.length - 1);
+      final maxPlanetRadius = 15.0; // Maximum planet radius from PlanetGenerator
+      final systemSize = maxOrbitRadius + maxPlanetRadius + 20.0; // Add margin
+      
       print('   [DEBUG] Initializing camera controller...');
-      await _cameraController.initialize(canvas);
+      print('   [DEBUG] System size for camera: $systemSize (maxOrbit: $maxOrbitRadius, maxPlanet: $maxPlanetRadius)');
+      await _cameraController.initialize(canvas, systemSize: systemSize);
       print('✅ [DEBUG] All Three.js components initialized');
     } catch (e, stackTrace) {
       print('❌ [DEBUG] Error initializing Three.js components: $e');
@@ -132,26 +149,51 @@ class _UniverseScreenState extends State<UniverseScreen> {
     _starFlicker.initialize(_starfield!);
     _particleDrift.initialize(_starfield!);
 
-    // Add lighting - improved for better color visibility
-    final ambientLight = AmbientLight(0xffffff.toJS, 0.6); // Increased ambient
+    // Add lighting - balanced for color visibility without washing out
+    // Reduced intensity to see actual colors instead of white
+    final ambientLight = AmbientLight(0xffffff.toJS, 0.8); // Reduced from 2.0 to see colors
     _sceneManager.addLight(ambientLight);
 
-    final directionalLight = DirectionalLight(0xffffff.toJS, 1.2); // Brighter directional
+    final directionalLight = DirectionalLight(0xffffff.toJS, 1.0); // Reduced from 2.0
     // Use bridge helper to set position (position is read-only in Three.js)
-    setObjectPosition(directionalLight as JSAny, 50.0, 50.0, 50.0);
+    setObjectPosition(directionalLight as JSAny, 100.0, 100.0, 100.0);
     _sceneManager.addLight(directionalLight);
+    
+    // Add additional light from opposite side for better illumination
+    final directionalLight2 = DirectionalLight(0xffffff.toJS, 0.6); // Reduced from 1.5
+    setObjectPosition(directionalLight2 as JSAny, -100.0, 80.0, -100.0);
+    _sceneManager.addLight(directionalLight2);
 
-    // Generate planets and orbits
-    final planetGen = PlanetGenerator();
+    // Generate Sun at center (user/organization)
+    final sunGen = SunGenerator();
+    _sun = sunGen.generateSun();
+    _sceneManager.addObject(_sun!);
+    
+    // Generate sun halo
+    _sunHalo = sunGen.generateHalo();
+    _sceneManager.addObject(_sunHalo!);
+    
+    // Generate sun particles
+    _sunParticles = sunGen.generateParticles(count: 30);
+    for (final particle in _sunParticles) {
+      _sceneManager.addObject(particle);
+    }
+
+    // Generate orbits (very subtle)
     final orbitGen = OrbitGenerator();
-
     for (int i = 0; i < widget.repositories.length; i++) {
-      final repo = widget.repositories[i];
-
-      // Generate orbit
       final orbit = orbitGen.generateOrbit(i);
       _orbits.add(orbit);
       _sceneManager.addObject(orbit);
+    }
+
+    // Generate planets, moons, and rings
+    final planetGen = PlanetGenerator();
+    final moonGen = MoonGenerator();
+    final ringGen = RingGenerator();
+
+    for (int i = 0; i < widget.repositories.length; i++) {
+      final repo = widget.repositories[i];
 
       // Generate planet
       final planet = planetGen.generatePlanet(repo);
@@ -164,6 +206,34 @@ class _UniverseScreenState extends State<UniverseScreen> {
       setObjectPosition(planet as JSAny, posX, posY, posZ);
       _planets.add(planet);
       _sceneManager.addObject(planet);
+      
+      // Generate rings (branches) - attach to planet
+      final rings = ringGen.generateRings(repo);
+      _rings.add(rings);
+      for (final ring in rings) {
+        // Position ring at planet location (will follow planet)
+        setObjectPosition(ring as JSAny, posX, posY, posZ);
+        _sceneManager.addObject(ring);
+      }
+      
+      // Generate moons (forks) - orbit around planet
+      final moons = moonGen.generateMoons(repo, planet);
+      _moons.add(moons);
+      for (final moon in moons) {
+        // Initial position relative to planet (will be updated in animation)
+        setObjectPosition(moon as JSAny, posX, posY, posZ);
+        _sceneManager.addObject(moon);
+      }
+      
+      // Initialize animation data for this planet with unique speeds
+      final random = math.Random(i); // Use index as seed for consistency
+      _planetAnimations[i] = _PlanetAnimationData(
+        rotationSpeedX: 0.2 + random.nextDouble() * 0.3, // 0.2-0.5 rad/s
+        rotationSpeedY: 0.1 + random.nextDouble() * 0.2, // 0.1-0.3 rad/s
+        rotationSpeedZ: 0.15 + random.nextDouble() * 0.25, // 0.15-0.4 rad/s
+        translationSpeed: 0.05 + random.nextDouble() * 0.15, // 0.05-0.2 (different orbit speeds)
+        initialAngle: angle,
+      );
     }
 
     // Generate nebulas - DISABLED for now (they look like white squares)
@@ -175,14 +245,24 @@ class _UniverseScreenState extends State<UniverseScreen> {
     //   _sceneManager.addObject(nebula);
     // }
 
+    // Camera is already positioned correctly during initialization
+    // No need to reposition here
+    
     // Start rendering
     _renderer.startRendering();
     _startAnimationLoop();
     _startEasterEggTimer();
-
-    setState(() {
-      _isInitialized = true;
-    });
+    
+    // Mark as initialized
+    if (mounted) {
+      print('✅ [HUD DEBUG] Setting _isInitialized = true');
+      setState(() {
+        _isInitialized = true;
+      });
+      print('✅ [HUD DEBUG] setState completed, _isInitialized should now be: true');
+    } else {
+      print('⚠️ [HUD DEBUG] Widget not mounted, cannot set _isInitialized');
+    }
   }
 
   void _startEasterEggTimer() {
@@ -229,30 +309,111 @@ class _UniverseScreenState extends State<UniverseScreen> {
       _starFlicker.update(deltaTime);
       _particleDrift.update(deltaTime);
 
-      // Animate planets (slow rotation)
-      // Note: Animation will be handled by Three.js directly in full implementation
-      // For now, we skip direct rotation updates due to JS interop complexity
+      // Animate Sun
+      if (_sun != null) {
+        // Rotate sun slowly
+        try {
+          final rotation = MeshExtension(_sun!).rotation;
+          final currentRotY = Vector3Extension(rotation).y;
+          Vector3Extension(rotation).y = currentRotY + 0.05 * deltaTime; // Slow rotation
+        } catch (e) {
+          // Fallback
+          final currentRotation = getObjectRotation(_sun! as JSAny);
+          if (currentRotation != null) {
+            final rotY = Vector3Extension(currentRotation).y + 0.05 * deltaTime;
+            setObjectRotation(_sun! as JSAny, 0, rotY, 0);
+          }
+        }
+      }
 
-      // Animate orbits (slow revolution)
-      // Note: Animation will be handled by Three.js directly in full implementation
-      // For now, we skip direct rotation updates due to JS interop complexity
+      // Animate sun halo pulse
+      if (_sunHalo != null) {
+        _sunPulsePhase += deltaTime * 0.5; // Pulse speed
+        final pulseIntensity = 0.3 + (math.sin(_sunPulsePhase) * 0.2); // Pulse between 0.3 and 0.5
+        try {
+          final material = MeshExtension(_sunHalo!).material;
+          MaterialExtension(material).opacity = pulseIntensity;
+        } catch (e) {
+          print('   [DEBUG] Error updating sun halo opacity: $e');
+        }
+      }
 
-      // Animate planets on orbits
+      // Animate sun particles (rotate around sun)
+      for (final particle in _sunParticles) {
+        try {
+          final rotation = PointsExtension(particle).rotation;
+          final currentRotY = Vector3Extension(rotation).y;
+          Vector3Extension(rotation).y = currentRotY + 0.1 * deltaTime; // Rotate particles
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+
+      // Animate planets with individual rotation and translation speeds
+      final elapsedTime = _clock.getElapsedTime();
+      
       for (
         int i = 0;
         i < _planets.length && i < widget.repositories.length;
         i++
       ) {
         final planet = _planets[i];
-        final time = DateTime.now().millisecondsSinceEpoch / 10000.0;
-        final angle =
-            (i / widget.repositories.length) * 2 * 3.14159 + time * 0.1;
-        final planetPos = OrbitGenerator.calculatePlanetPosition(i, angle);
-        // Use bridge helper to set position (position is read-only in Three.js)
-        final posX = Vector3Extension(planetPos).x;
-        final posY = Vector3Extension(planetPos).y;
-        final posZ = Vector3Extension(planetPos).z;
-        setObjectPosition(planet as JSAny, posX, posY, posZ);
+        final animData = _planetAnimations[i];
+        
+        if (animData != null) {
+          // Rotate planet around its own axis (different speeds for each)
+          // Access rotation directly via extension
+          try {
+            final rotation = MeshExtension(planet).rotation;
+            final currentRotX = Vector3Extension(rotation).x;
+            final currentRotY = Vector3Extension(rotation).y;
+            final currentRotZ = Vector3Extension(rotation).z;
+            
+            // Update rotation
+            Vector3Extension(rotation).x = currentRotX + animData.rotationSpeedX * deltaTime;
+            Vector3Extension(rotation).y = currentRotY + animData.rotationSpeedY * deltaTime;
+            Vector3Extension(rotation).z = currentRotZ + animData.rotationSpeedZ * deltaTime;
+          } catch (e) {
+            // Fallback: use helper function
+            final currentRotation = getObjectRotation(planet as JSAny);
+            if (currentRotation != null) {
+              final rotX = Vector3Extension(currentRotation).x + animData.rotationSpeedX * deltaTime;
+              final rotY = Vector3Extension(currentRotation).y + animData.rotationSpeedY * deltaTime;
+              final rotZ = Vector3Extension(currentRotation).z + animData.rotationSpeedZ * deltaTime;
+              setObjectRotation(planet as JSAny, rotX, rotY, rotZ);
+            }
+          }
+          
+          // Translate planet on orbit (different speeds for each)
+          final angle = animData.initialAngle + elapsedTime * animData.translationSpeed;
+          final planetPos = OrbitGenerator.calculatePlanetPosition(i, angle);
+          final posX = Vector3Extension(planetPos).x;
+          final posY = Vector3Extension(planetPos).y;
+          final posZ = Vector3Extension(planetPos).z;
+          setObjectPosition(planet as JSAny, posX, posY, posZ);
+          
+          // Update rings position (follow planet)
+          if (i < _rings.length) {
+            for (final ring in _rings[i]) {
+              setObjectPosition(ring as JSAny, posX, posY, posZ);
+            }
+          }
+          
+          // Update moons position (orbit around planet)
+          if (i < _moons.length) {
+            final moons = _moons[i];
+            for (int moonIndex = 0; moonIndex < moons.length; moonIndex++) {
+              final moon = moons[moonIndex];
+              // Calculate moon orbit (circular around planet)
+              final moonOrbitRadius = 2.0 + (moonIndex * 0.5); // Different radius for each moon
+              final moonAngle = elapsedTime * 0.5 + (moonIndex * 2 * math.pi / moons.length); // Different phase
+              final moonX = posX + moonOrbitRadius * math.cos(moonAngle);
+              final moonY = posY + moonOrbitRadius * math.sin(moonAngle);
+              final moonZ = posZ + moonOrbitRadius * 0.3 * math.sin(moonAngle * 0.7); // Slight 3D variation
+              setObjectPosition(moon as JSAny, moonX, moonY, moonZ);
+            }
+          }
+        }
       }
 
       // Animate easter egg (rocket/UFO crossing scene)
@@ -300,14 +461,21 @@ class _UniverseScreenState extends State<UniverseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('🔄 [HUD DEBUG] build() called - _isInitialized: $_isInitialized, _threeJsError: $_threeJsError');
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand, // Ensure stack fills entire screen
         children: [
-          // 3D Canvas
-          WebGLCanvas(
-            onCanvasReady: _onCanvasReady,
-            child: const SizedBox.expand(),
+          // 3D Canvas - Behind everything, z-index -1
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: false, // Allow canvas interaction
+              child: WebGLCanvas(
+                onCanvasReady: _onCanvasReady,
+                child: const SizedBox.expand(),
+              ),
+            ),
           ),
           // Error overlay if Three.js failed
           if (_threeJsError)
@@ -375,12 +543,18 @@ class _UniverseScreenState extends State<UniverseScreen> {
                 ),
               ),
             ),
-          // HUD Overlay - Show immediately, don't wait for full initialization
-          if (!_threeJsError)
-            HUDOverlay(
-              stats: widget.stats,
-              repositories: widget.repositories,
-              onResetCamera: _resetCamera,
+          // HUD Overlay - ALWAYS visible, positioned on top
+          // Use Material to ensure proper z-index stacking above canvas
+          if (_isInitialized && !_threeJsError)
+            Positioned.fill(
+              child: Material(
+                type: MaterialType.transparency,
+                child: HUDOverlay(
+                  stats: widget.stats,
+                  repositories: widget.repositories,
+                  onResetCamera: _resetCamera,
+                ),
+              ),
             ),
         ],
       ),
@@ -403,4 +577,21 @@ class Clock {
   double getElapsedTime() {
     return DateTime.now().millisecondsSinceEpoch / 1000.0 - _startTime;
   }
+}
+
+// Planet animation data - stores individual rotation and translation speeds
+class _PlanetAnimationData {
+  final double rotationSpeedX;
+  final double rotationSpeedY;
+  final double rotationSpeedZ;
+  final double translationSpeed;
+  final double initialAngle;
+
+  _PlanetAnimationData({
+    required this.rotationSpeedX,
+    required this.rotationSpeedY,
+    required this.rotationSpeedZ,
+    required this.translationSpeed,
+    required this.initialAngle,
+  });
 }

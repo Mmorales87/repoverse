@@ -9,6 +9,7 @@ class RepositoryData {
   final String source; // "github" or "bitbucket"
   final String? description;
   final DateTime? lastUpdated;
+  final bool isFork; // Whether this repository is a fork of another
 
   RepositoryData({
     required this.name,
@@ -20,6 +21,7 @@ class RepositoryData {
     required this.source,
     this.description,
     this.lastUpdated,
+    this.isFork = false, // Default to false
   });
 
   /// Get the primary language (most bytes)

@@ -159,10 +159,13 @@ class GitHubService {
         languages = {};
       }
 
-      // Calculate activity score
+      // Check if this is a fork
+      final isFork = repo['fork'] as bool? ?? false;
+      
+      // Calculate activity score (only for non-forks)
       final stars = repo['stargazers_count'] as int? ?? 0;
       final forks = repo['forks_count'] as int? ?? 0;
-      final activityScore = _calculateActivityScore(commitsCount, stars, forks);
+      final activityScore = isFork ? 0.0 : _calculateActivityScore(commitsCount, stars, forks);
 
       repositories.add(RepositoryData(
         name: repoName,
@@ -176,6 +179,7 @@ class GitHubService {
         lastUpdated: repo['updated_at'] != null
             ? DateTime.parse(repo['updated_at'] as String)
             : null,
+        isFork: isFork,
       ));
     }
 

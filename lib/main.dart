@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/github/github_service.dart';
 import 'core/bitbucket/bitbucket_service.dart';
 import 'core/repository_aggregator.dart';
+import 'core/models/repository_data.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/universe_screen.dart';
 import 'ui/screens/user_data_screen.dart';
@@ -68,9 +69,17 @@ class _AppNavigatorState extends State<AppNavigator> {
     List<dynamic> repositories,
     Map<String, dynamic> stats,
   ) {
+    // Use only own repositories (exclude forks) for 3D visualization
+    final reposList = repositories.cast<RepositoryData>();
+    final ownRepos = (stats['ownRepos'] as List<dynamic>?)?.cast<RepositoryData>() ?? 
+        reposList.where((r) => !r.isFork).toList();
+    
+    final forkCount = reposList.where((r) => r.isFork).length;
+    print('🌌 [DEBUG] Navigating to universe with ${ownRepos.length} own repos (excluding $forkCount forks)');
+    
     setState(() {
       _currentScreen = UniverseScreen(
-        repositories: repositories.cast(),
+        repositories: ownRepos,
         stats: stats,
       );
     });

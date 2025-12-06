@@ -48,17 +48,30 @@ class PlanetGenerator {
 
     // Get color for primary language
     final primaryLanguage = repository.primaryLanguage ?? 'JavaScript';
-    final colorHex =
+    var colorHex =
         _languageColors[primaryLanguage] ?? _languageColors['JavaScript']!;
+    
+    // Ensure color is a proper 24-bit color (0xRRGGBB format)
+    // Some colors might be shorter, so we ensure they're full 24-bit
+    colorHex = colorHex & 0xFFFFFF; // Mask to ensure 24-bit
 
-    // Create material with language color - brighter and more visible
-    final material = MeshStandardMaterial(
+    // If this is a fork, make it more transparent and greyed out
+    if (repository.isFork) {
+      // Make forks grey and semi-transparent
+      colorHex = 0x666666; // Grey color for forks
+    }
+
+    // Debug: Log the color being used
+    final colorHexString = colorHex.toRadixString(16).toUpperCase().padLeft(6, '0');
+    print('   [DEBUG] Planet "${repository.name}" - Language: $primaryLanguage, Color: 0x$colorHexString ($colorHex)${repository.isFork ? " [FORK]" : ""}');
+
+    // Use MeshBasicMaterial for pure color visibility (no lighting calculations)
+    // This ensures colors are always visible regardless of lighting
+    final material = MeshBasicMaterial(
       ({
-        'color': colorHex,
-        'emissive': colorHex,
-        'emissiveIntensity': 0.5, // Increased for better visibility
-        'roughness': 0.5,
-        'metalness': 0.5,
+        'color': colorHex, // Three.js accepts hex numbers directly (0xRRGGBB format)
+        if (repository.isFork) 'transparent': true,
+        if (repository.isFork) 'opacity': 0.5, // Semi-transparent for forks
       } as Map<String, dynamic>) as JSAny?,
     );
 

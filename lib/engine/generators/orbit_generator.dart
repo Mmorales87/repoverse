@@ -4,8 +4,8 @@ import '../three_js_bindings.dart';
 
 /// Generates orbit rings (TorusGeometry) for repositories
 class OrbitGenerator {
-  static const double baseRadius = 10.0;
-  static const double radiusIncrement = 8.0;
+  static const double baseRadius = 15.0; // Increased to prevent collisions
+  static const double radiusIncrement = 12.0; // Increased spacing between orbits
   static const double tubeRadius = 0.1;
   static const int radialSegments = 64;
   static const int tubularSegments = 32;
@@ -22,12 +22,12 @@ class OrbitGenerator {
       tubularSegments,
     );
 
-    // Create semi-transparent material with better visibility
+    // Create VERY subtle orbit lines (almost invisible)
     final material = MeshBasicMaterial(
       ({
-        'color': 0x8888ff, // Light blue/purple for better visibility
+        'color': 0x444466, // Very dark blue/purple - very subtle
         'transparent': true,
-        'opacity': 0.6, // More visible
+        'opacity': 0.08, // VERY subtle - almost invisible
         'side': 2, // DoubleSide
       } as Map<String, dynamic>) as JSAny?,
     );

@@ -18,13 +18,18 @@ class HUDOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    // Use Material with high elevation to ensure it's above canvas
+    return Material(
+      type: MaterialType.transparency,
+      elevation: 1000, // Very high elevation to ensure it's above canvas
       child: Stack(
+        clipBehavior: Clip.none, // Allow widgets to overflow if needed
         children: [
-          // Top-left: User info and stats
-          Positioned(
-            top: 16,
-            left: 16,
+        // Top-left: User info and stats
+        Positioned(
+          top: 16,
+          left: 16,
+          child: SafeArea(
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -66,11 +71,15 @@ class HUDOverlay extends StatelessWidget {
               ),
             ),
           ),
-          // Bottom-left: Legend
-          Positioned(
-            bottom: 16,
-            left: 16,
+        ),
+        // Bottom-left: Legend - Always visible
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: SafeArea(
             child: Container(
+              margin: const EdgeInsets.all(16),
+              constraints: const BoxConstraints(maxWidth: 300),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.8),
@@ -90,13 +99,26 @@ class HUDOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildLegendItem('🟣 Colored Spheres', 'Repositories (color = language)'),
-                  _buildLegendItem('🔵 Blue Rings', 'Orbit paths'),
+                  _buildLegendItem(
+                    '☀️ Golden Sphere',
+                    'User/Organization (center)',
+                  ),
+                  _buildLegendItem(
+                    '🟣 Colored Spheres',
+                    'Repositories (color = language)',
+                  ),
+                  _buildLegendItem(
+                    '🌙 Small Gray Spheres',
+                    'Forks (moons orbiting planets)',
+                  ),
+                  _buildLegendItem(
+                    '💍 Colored Rings',
+                    'Branches (complexity, based on commits)',
+                  ),
                   _buildLegendItem('✨ White Dots', 'Stars in the background'),
-                  _buildLegendItem('🌌 Colored Planes', 'Nebulas (by language group)'),
                   const SizedBox(height: 8),
                   const Text(
-                    '💡 Tip: Drag to rotate, scroll to zoom',
+                    '💡 Tip: Left-click drag to rotate, scroll to zoom, right-click drag to pan',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 11,
@@ -107,10 +129,12 @@ class HUDOverlay extends StatelessWidget {
               ),
             ),
           ),
-          // Top-right: Share card button
-          Positioned(
-            top: 16,
-            right: 16,
+        ),
+        // Top-right: Share card button
+        Positioned(
+          top: 16,
+          right: 16,
+          child: SafeArea(
             child: ElevatedButton.icon(
               onPressed: () => _showShareCard(context),
               icon: const Icon(Icons.share),
@@ -125,17 +149,20 @@ class HUDOverlay extends StatelessWidget {
               ),
             ),
           ),
-          // Bottom-right: Camera reset button
-          Positioned(
-            bottom: 16,
-            right: 16,
+        ),
+        // Bottom-right: Camera reset button
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: SafeArea(
             child: FloatingActionButton(
               onPressed: onResetCamera,
               backgroundColor: Colors.indigo,
               child: const Icon(Icons.refresh),
             ),
           ),
-        ],
+        ),
+      ],
       ),
     );
   }
@@ -167,19 +194,15 @@ class HUDOverlay extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 16),
-          ),
+          Text(icon, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: Text(
               description,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

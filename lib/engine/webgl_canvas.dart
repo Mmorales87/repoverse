@@ -1,6 +1,5 @@
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 /// Flutter widget that embeds a WebGL canvas for Three.js rendering
 class WebGLCanvas extends StatefulWidget {
@@ -26,47 +25,47 @@ class _WebGLCanvasState extends State<WebGLCanvas> {
   }
 
   void _initializeCanvas() {
-    final renderObject = _key.currentContext?.findRenderObject();
-    if (renderObject is RenderBox) {
-      final size = renderObject.size;
-      final position = renderObject.localToGlobal(Offset.zero);
+    // Use viewport size for fixed positioning
+    final width = html.window.innerWidth ?? 800;
+    final height = html.window.innerHeight ?? 600;
 
-      // Create or get canvas element
-      _canvas = html.CanvasElement(
-        width: size.width.toInt(),
-        height: size.height.toInt(),
-      );
+    // Create or get canvas element
+    _canvas = html.CanvasElement(
+      width: width,
+      height: height,
+    );
 
-      _canvas!.style.width = '${size.width}px';
-      _canvas!.style.height = '${size.height}px';
-      _canvas!.style.position = 'absolute';
-      _canvas!.style.left = '${position.dx}px';
-      _canvas!.style.top = '${position.dy}px';
-      _canvas!.style.pointerEvents = 'auto';
+    _canvas!.style.width = '100%';
+    _canvas!.style.height = '100%';
+    _canvas!.style.position = 'fixed';
+    _canvas!.style.left = '0px';
+    _canvas!.style.top = '0px';
+    _canvas!.style.pointerEvents = 'auto';
+      _canvas!.style.zIndex = '-1'; // Behind UI elements
+    _canvas!.style.display = 'block'; // Ensure it's visible
 
-      // Add canvas to document body
-      html.document.body!.append(_canvas!);
+    // Add canvas to document body
+    html.document.body!.append(_canvas!);
 
-      // Notify that canvas is ready
-      widget.onCanvasReady?.call(_canvas!);
+    // Notify that canvas is ready
+    widget.onCanvasReady?.call(_canvas!);
 
-      // Listen for size changes
-      _updateCanvasSize();
-    }
+    // Listen for size changes
+    _updateCanvasSize();
   }
 
   void _updateCanvasSize() {
-    final renderObject = _key.currentContext?.findRenderObject();
-    if (renderObject is RenderBox && _canvas != null) {
-      final size = renderObject.size;
-      final position = renderObject.localToGlobal(Offset.zero);
+    if (_canvas != null) {
+      // Use viewport size for fixed positioning
+      final width = html.window.innerWidth ?? 800;
+      final height = html.window.innerHeight ?? 600;
 
-      _canvas!.width = size.width.toInt();
-      _canvas!.height = size.height.toInt();
-      _canvas!.style.width = '${size.width}px';
-      _canvas!.style.height = '${size.height}px';
-      _canvas!.style.left = '${position.dx}px';
-      _canvas!.style.top = '${position.dy}px';
+      _canvas!.width = width;
+      _canvas!.height = height;
+      _canvas!.style.width = '100%';
+      _canvas!.style.height = '100%';
+      _canvas!.style.left = '0px';
+      _canvas!.style.top = '0px';
     }
   }
 

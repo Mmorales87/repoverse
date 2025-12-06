@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/galaxy_background.dart';
 
 /// Home/intro screen with title, inputs, and generate button
 class HomeScreen extends StatefulWidget {
@@ -52,15 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.black, Colors.indigo.shade900],
+      backgroundColor: Colors.transparent, // Transparent so galaxy shows
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Galaxy background (behind everything)
+          GalaxyBackground(
+            density: 0.4,
+            speed: 1.0,
+            mouseInteraction: true,
+            mouseRepulsion: true,
+            child: const SizedBox.shrink(), // Empty child, canvas is added to DOM
           ),
-        ),
-        child: SafeArea(
+          // Content on top
+          Container(
+            color: Colors.black.withOpacity(0.3), // Subtle overlay for readability
+            child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(32.0),
@@ -203,7 +211,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
