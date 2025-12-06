@@ -1,6 +1,8 @@
 /**
  * HUD Manager - User interface overlay
  */
+import * as THREE from 'three';
+
 export class HUDManager {
   constructor(container) {
     this.container = container;
@@ -14,12 +16,13 @@ export class HUDManager {
   /**
    * Initialize HUD
    */
-  initialize(backgroundManager, sceneManager, effectsManager, galaxy, yearSelector) {
+  initialize(backgroundManager, sceneManager, effectsManager, galaxy, yearSelector, app) {
     this.backgroundManager = backgroundManager;
     this.sceneManager = sceneManager;
     this.effectsManager = effectsManager;
     this.galaxy = galaxy;
     this.yearSelector = yearSelector;
+    this.app = app; // Store app reference for ShareCard
     
     this.createHUD();
     this.initialized = true;
@@ -138,6 +141,30 @@ export class HUDManager {
     topRight.appendChild(legendBtn);
     topRight.appendChild(demoBtn);
     
+    // Share Card button
+    const shareCardBtn = document.createElement('button');
+    shareCardBtn.id = 'hud-share-card-btn';
+    shareCardBtn.textContent = 'Export Year Card';
+    shareCardBtn.style.cssText = `
+      padding: 10px 20px;
+      background: rgba(100, 181, 246, 0.8);
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      margin-left: 10px;
+    `;
+    shareCardBtn.onmouseover = () => shareCardBtn.style.background = 'rgba(100, 181, 246, 1)';
+    shareCardBtn.onmouseout = () => shareCardBtn.style.background = 'rgba(100, 181, 246, 0.8)';
+    shareCardBtn.onclick = () => {
+      if (this.app && this.app.shareCard) {
+        this.app.shareCard.generateYearCard();
+      }
+    };
+    topRight.appendChild(shareCardBtn);
+    
     // Rate-limit banner
     const rateLimitBanner = document.createElement('div');
     rateLimitBanner.id = 'hud-rate-limit';
@@ -179,6 +206,7 @@ export class HUDManager {
       exportBtn: exportBtn,
       demoBtn: demoBtn,
       legendBtn: legendBtn,
+      shareCardBtn: shareCardBtn,
       rateLimitBanner: rateLimitBanner,
       legendPanel: legendPanel,
       hud: hud
@@ -350,7 +378,10 @@ export class HUDManager {
    * Export universe as PNG (composite Galaxy + Three.js)
    */
   exportUniversePNG() {
-    if (!this.sceneManager) return;
+    if (!this.sceneManager || !this.sceneManager.renderer) {
+      console.error('[HUD] Cannot export: sceneManager or renderer not available');
+      return;
+    }
     
     // Hide HUD and year selector
     const hudVisible = this.elements.hud ? this.elements.hud.style.display !== 'none' : false;
@@ -358,55 +389,103 @@ export class HUDManager {
       this.elements.hud.style.display = 'none';
     }
     
-    // Hide year selector if exists
     const yearSelector = document.getElementById('year-selector');
     const yearSelectorVisible = yearSelector && yearSelector.style.display !== 'none';
     if (yearSelector) {
       yearSelector.style.display = 'none';
     }
     
-    // Force render
+    // Force render immediately
     if (this.effectsManager && this.effectsManager.composer) {
       this.effectsManager.render();
-    } else {
-      this.sceneManager.render();
+    } else if (this.sceneManager.renderer && this.sceneManager.scene && this.sceneManager.camera) {
+      this.sceneManager.renderer.render(this.sceneManager.scene, this.sceneManager.camera);
     }
     
-    // Create composite canvas
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const compositeCanvas = document.createElement('canvas');
-    compositeCanvas.width = width;
-    compositeCanvas.height = height;
-    const ctx = compositeCanvas.getContext('2d');
-    
-    // Draw Galaxy background first
-    if (this.galaxy && this.galaxy.canvas) {
-      ctx.drawImage(this.galaxy.canvas, 0, 0);
-    }
-    
-    // Draw Three.js canvas on top
-    const threeCanvas = this.sceneManager.canvas;
-    ctx.drawImage(threeCanvas, 0, 0);
-    
-    // Get composite data
-    const dataURL = compositeCanvas.toDataURL('image/png');
-    
-    // Create download link
-    const link = document.createElement('a');
-    const username = this.elements.username ? this.elements.username.textContent.replace('@', '') : 'user';
-    const date = new Date().toISOString().split('T')[0];
-    link.download = `repoverse-${username}-${date}.png`;
-    link.href = dataURL;
-    link.click();
-    
-    // Restore HUD and year selector
-    if (this.elements.hud && hudVisible) {
-      this.elements.hud.style.display = 'block';
-    }
-    if (yearSelector && yearSelectorVisible) {
-      yearSelector.style.display = 'block';
-    }
+    // Wait for render to complete - use double RAF to ensure GPU has finished
+    requestAnimationFrame(() => {
+      // Force another render
+      if (this.effectsManager && this.effectsManager.composer) {
+        this.effectsManager.render();
+      } else if (this.sceneManager.renderer && this.sceneManager.scene && this.sceneManager.camera) {
+        this.sceneManager.renderer.render(this.sceneManager.scene, this.sceneManager.camera);
+      }
+      
+      requestAnimationFrame(() => {
+        // Create composite canvas using current viewport size
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const compositeCanvas = document.createElement('canvas');
+        compositeCanvas.width = width;
+        compositeCanvas.height = height;
+        const ctx = compositeCanvas.getContext('2d');
+        
+        // Fill with black background first
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw Galaxy background first
+        if (this.galaxy && this.galaxy.canvas && this.galaxy.canvas.width > 0) {
+          try {
+            ctx.drawImage(this.galaxy.canvas, 0, 0, width, height);
+          } catch (e) {
+            console.warn('[HUD] Could not draw galaxy canvas:', e);
+          }
+        }
+        
+        // Draw Three.js canvas on top - use renderer.domElement which is the actual canvas
+        const threeCanvas = this.sceneManager.renderer.domElement;
+        if (threeCanvas && threeCanvas.width > 0 && threeCanvas.height > 0) {
+          try {
+            // Ensure canvas is fully rendered
+            ctx.drawImage(threeCanvas, 0, 0, width, height);
+          } catch (e) {
+            console.error('[HUD] Error drawing Three.js canvas:', e);
+            // Fallback: try the canvas property directly
+            if (this.sceneManager.canvas && this.sceneManager.canvas.width > 0) {
+              try {
+                ctx.drawImage(this.sceneManager.canvas, 0, 0, width, height);
+              } catch (e2) {
+                console.error('[HUD] Fallback canvas also failed:', e2);
+              }
+            }
+          }
+        } else {
+          console.warn('[HUD] Three.js canvas is empty or invalid', {
+            hasCanvas: !!threeCanvas,
+            width: threeCanvas?.width,
+            height: threeCanvas?.height
+          });
+        }
+        
+        // Get composite data
+        const dataURL = compositeCanvas.toDataURL('image/png');
+        
+        // Verify we have actual data
+        if (dataURL && dataURL.length > 100) { // PNG data URLs are much longer than "data:,"
+          // Create download link
+          const link = document.createElement('a');
+          const username = this.elements.username ? this.elements.username.textContent.replace('@', '') : 'user';
+          const date = new Date().toISOString().split('T')[0];
+          link.download = `repoverse-${username}-${date}.png`;
+          link.href = dataURL;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => document.body.removeChild(link), 100);
+        } else {
+          console.error('[HUD] Failed to generate PNG data - dataURL too short:', dataURL?.substring(0, 50));
+          alert('Error al generar la imagen. El canvas puede estar vacío. Por favor, inténtalo de nuevo.');
+        }
+        
+        // Restore HUD and year selector immediately
+        if (this.elements.hud && hudVisible) {
+          this.elements.hud.style.display = 'block';
+        }
+        if (yearSelector && yearSelectorVisible) {
+          yearSelector.style.display = 'block';
+        }
+      });
+    });
   }
 
   /**

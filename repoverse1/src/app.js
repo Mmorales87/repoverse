@@ -29,6 +29,7 @@ export class App {
     this.homeScreen = null;
     this.yearSelector = null;
     this.planetDetailsPanel = null;
+    this.shareCard = null;
     
     // State
     this.currentUsername = null;
@@ -182,12 +183,22 @@ export class App {
         this.sceneRenderer,
         this.effectsManager,
         this.backgroundRenderer,
-        this.yearSelector
+        this.yearSelector,
+        this // Pass app reference
       );
       Logger.success(Logger.PREFIXES.APP, 'HUDManager initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
       this.hudManager = null;
+    }
+
+    // ShareCard
+    try {
+      const { ShareCard } = await import('./ui/shareCard.js');
+      this.shareCard = new ShareCard(this);
+      Logger.success(Logger.PREFIXES.APP, 'ShareCard initialized');
+    } catch (error) {
+      ErrorHandler.handleInitError(error, Logger.PREFIXES.APP, 'ShareCard');
     }
   }
 
