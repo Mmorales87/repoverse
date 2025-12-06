@@ -30,12 +30,13 @@ class MoonGenerator {
       // Create sphere geometry for moon
       final geometry = SphereGeometry(moonRadius, segments, segments);
 
-      // Create material (lighter version of planet color)
+      // Create material - NO emissive, NO lighting effects
+      // Using MeshBasicMaterial which doesn't require lighting
       final material = MeshBasicMaterial(
         ({
           'color': moonColor,
-          'emissive': moonColor,
-          'emissiveIntensity': 0.5,
+          // 'emissive': moonColor, // DISABLED - testing without emissive
+          // 'emissiveIntensity': 0.5, // DISABLED
         } as Map<String, dynamic>) as JSAny?,
       );
 

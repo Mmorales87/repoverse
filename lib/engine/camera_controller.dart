@@ -26,6 +26,12 @@ class CameraController {
   double _sphericalRadius = 50.0;
   JSObject? _target; // Camera target for panning
 
+  // Mouse control state
+  bool _isDragging = false;
+  bool _isRightClickDragging = false; // For panning
+  double _lastMouseX = 0;
+  double _lastMouseY = 0;
+
   /// Initialize the camera
   /// Ensures Three.js is loaded before creating the camera
   /// [systemSize] is the total size of the system (max orbit radius + planet radius + margin)
@@ -46,8 +52,10 @@ class CameraController {
     print('      Calculated distance: $calculatedDistance');
     print('      Final distance: $_initialDistance');
 
-    // Create perspective camera
-    final aspect = canvas.width! / canvas.height!;
+    // Create perspective camera - ensure valid aspect ratio
+    final canvasWidth = (canvas.width ?? 800).clamp(100, 10000);
+    final canvasHeight = (canvas.height ?? 600).clamp(100, 10000);
+    final aspect = canvasWidth / canvasHeight;
     _camera = PerspectiveCamera(_fov, aspect, _near, _far);
 
     // Validate camera was created
@@ -97,10 +105,11 @@ class CameraController {
   void _setupMouseControls() {
     if (_canvas == null) return;
 
-    bool _isDragging = false;
-    bool _isRightClickDragging = false; // For panning
-    double _lastMouseX = 0;
-    double _lastMouseY = 0;
+    // Reset state
+    _isDragging = false;
+    _isRightClickDragging = false;
+    _lastMouseX = 0;
+    _lastMouseY = 0;
 
     _canvas!.onMouseDown.listen((event) {
       if (event.button == 0) {

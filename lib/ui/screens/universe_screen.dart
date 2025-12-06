@@ -149,20 +149,18 @@ class _UniverseScreenState extends State<UniverseScreen> {
     _starFlicker.initialize(_starfield!);
     _particleDrift.initialize(_starfield!);
 
-    // Add lighting - balanced for color visibility without washing out
-    // Reduced intensity to see actual colors instead of white
-    final ambientLight = AmbientLight(0xffffff.toJS, 0.8); // Reduced from 2.0 to see colors
-    _sceneManager.addLight(ambientLight);
-
-    final directionalLight = DirectionalLight(0xffffff.toJS, 1.0); // Reduced from 2.0
-    // Use bridge helper to set position (position is read-only in Three.js)
-    setObjectPosition(directionalLight as JSAny, 100.0, 100.0, 100.0);
-    _sceneManager.addLight(directionalLight);
-    
-    // Add additional light from opposite side for better illumination
-    final directionalLight2 = DirectionalLight(0xffffff.toJS, 0.6); // Reduced from 1.5
-    setObjectPosition(directionalLight2 as JSAny, -100.0, 80.0, -100.0);
-    _sceneManager.addLight(directionalLight2);
+    // NO LIGHTING - Testing if white color issue is caused by lighting
+    // All materials use MeshBasicMaterial which doesn't require lighting
+    // This will help us see if the white color problem is due to lighting
+    // Commented out all lights to test without any lighting effects
+    // final ambientLight = AmbientLight(0xffffff.toJS, 0.0); // DISABLED
+    // _sceneManager.addLight(ambientLight);
+    // final directionalLight = DirectionalLight(0xffffff.toJS, 0.0); // DISABLED
+    // setObjectPosition(directionalLight as JSAny, 100.0, 100.0, 100.0);
+    // _sceneManager.addLight(directionalLight);
+    // final directionalLight2 = DirectionalLight(0xffffff.toJS, 0.0); // DISABLED
+    // setObjectPosition(directionalLight2 as JSAny, -100.0, 80.0, -100.0);
+    // _sceneManager.addLight(directionalLight2);
 
     // Generate Sun at center (user/organization)
     final sunGen = SunGenerator();
@@ -248,9 +246,32 @@ class _UniverseScreenState extends State<UniverseScreen> {
     // Camera is already positioned correctly during initialization
     // No need to reposition here
     
+    // Force canvas size update before starting renderer
+    // This ensures the canvas has the correct size before rendering starts
+    final canvasWidth = (canvas.width ?? 800).clamp(100, 10000);
+    final canvasHeight = (canvas.height ?? 600).clamp(100, 10000);
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.width = '${canvasWidth}px';
+    canvas.style.height = '${canvasHeight}px';
+    print('   [DEBUG] Canvas size forced: ${canvasWidth}x${canvasHeight}');
+    
+    // Force renderer to update size immediately
+    _renderer.setScene(_sceneManager.scene!);
+    _renderer.setCamera(_cameraController.camera!);
+    
+    // Small delay to ensure canvas is ready, then start rendering
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     // Start rendering
+    print('🎬 [DEBUG] Starting renderer and animation loop...');
     _renderer.startRendering();
+    
+    // Force an initial render to ensure everything is visible
+    _renderer.renderFrame();
+    
     _startAnimationLoop();
+    print('✅ [DEBUG] Renderer and animation loop started');
     _startEasterEggTimer();
     
     // Mark as initialized
@@ -260,6 +281,13 @@ class _UniverseScreenState extends State<UniverseScreen> {
         _isInitialized = true;
       });
       print('✅ [HUD DEBUG] setState completed, _isInitialized should now be: true');
+      
+      // Force another render after setState to ensure visibility
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted) {
+          _renderer.renderFrame();
+        }
+      });
     } else {
       print('⚠️ [HUD DEBUG] Widget not mounted, cannot set _isInitialized');
     }
@@ -463,14 +491,17 @@ class _UniverseScreenState extends State<UniverseScreen> {
   Widget build(BuildContext context) {
     print('🔄 [HUD DEBUG] build() called - _isInitialized: $_isInitialized, _threeJsError: $_threeJsError');
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent, // Transparent so canvas shows through
       body: Stack(
         fit: StackFit.expand, // Ensure stack fills entire screen
+        clipBehavior: Clip.none, // Allow widgets to overflow if needed
         children: [
-          // 3D Canvas - Behind everything, z-index -1
+          // 3D Canvas - Behind everything
+          // Canvas is added directly to document.body with z-index 0
+          // This widget is just a placeholder to trigger initialization
           Positioned.fill(
             child: IgnorePointer(
-              ignoring: false, // Allow canvas interaction
+              ignoring: true, // Canvas handles its own pointer events
               child: WebGLCanvas(
                 onCanvasReady: _onCanvasReady,
                 child: const SizedBox.expand(),
@@ -544,18 +575,32 @@ class _UniverseScreenState extends State<UniverseScreen> {
               ),
             ),
           // HUD Overlay - ALWAYS visible, positioned on top
-          // Use Material to ensure proper z-index stacking above canvas
-          if (_isInitialized && !_threeJsError)
-            Positioned.fill(
-              child: Material(
-                type: MaterialType.transparency,
-                child: HUDOverlay(
-                  stats: widget.stats,
-                  repositories: widget.repositories,
-                  onResetCamera: _resetCamera,
-                ),
+          // Use Material with high elevation to ensure it's above canvas
+          // Flutter widgets are rendered in a separate layer, but Material elevation helps
+          Positioned.fill(
+            child: Material(
+              type: MaterialType.transparency,
+              elevation: 1000, // Very high elevation
+              child: IgnorePointer(
+                ignoring: false, // Allow interaction with HUD buttons
+                child: _isInitialized && !_threeJsError
+                    ? HUDOverlay(
+                        stats: widget.stats,
+                        repositories: widget.repositories,
+                        onResetCamera: _resetCamera,
+                      )
+                    : Container(
+                        // Show loading indicator while initializing
+                        color: Colors.black.withOpacity(0.3),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
               ),
             ),
+          ),
         ],
       ),
     );

@@ -39,14 +39,25 @@ class ThreeJSRenderer {
   void _updateSize() {
     if (_canvas == null || _renderer == null) return;
 
-    final width = _canvas!.width!.toDouble();
-    final height = _canvas!.height!.toDouble();
+    // Ensure valid canvas dimensions
+    final canvasWidth = (_canvas!.width ?? 800).clamp(100, 10000);
+    final canvasHeight = (_canvas!.height ?? 600).clamp(100, 10000);
+    final width = canvasWidth.toDouble();
+    final height = canvasHeight.toDouble();
 
-    rendererSetSize(_renderer!, width, height);
+    // Only update if size is valid
+    if (width > 0 && height > 0 && width.isFinite && height.isFinite) {
+      rendererSetSize(_renderer!, width, height);
 
-    // Update camera aspect ratio if camera exists
-    if (_camera != null) {
-      (_camera! as JSObject).aspect = width / height;
+      // Update camera aspect ratio if camera exists
+      if (_camera != null) {
+        final aspect = width / height;
+        if (aspect > 0 && aspect.isFinite) {
+          setCameraAspect(_camera! as JSAny, aspect);
+        }
+      }
+    } else {
+      print('⚠️ [RENDERER] Invalid canvas size: ${width}x${height}');
     }
   }
 
@@ -58,7 +69,11 @@ class ThreeJSRenderer {
   /// Set the camera to use
   void setCamera(JSObject camera) {
     _camera = camera as JSAny;
-    _updateSize(); // Update aspect ratio
+    _updateSize(); // Update aspect ratio and renderer size
+    // Force a render after setting camera to ensure visibility
+    if (_isRendering) {
+      renderFrame();
+    }
   }
 
   /// Start the render loop
@@ -67,9 +82,11 @@ class ThreeJSRenderer {
         _renderer == null ||
         _scene == null ||
         _camera == null) {
+      print('⚠️ [RENDERER] Cannot start rendering: isRendering=$_isRendering, renderer=${_renderer != null}, scene=${_scene != null}, camera=${_camera != null}');
       return;
     }
 
+    print('✅ [RENDERER] Starting render loop...');
     _isRendering = true;
     _renderLoop();
   }
@@ -88,11 +105,18 @@ class ThreeJSRenderer {
         _renderer == null ||
         _scene == null ||
         _camera == null) {
+      print('⚠️ [RENDERER] Render loop stopped: isRendering=$_isRendering, renderer=${_renderer != null}, scene=${_scene != null}, camera=${_camera != null}');
       return;
     }
 
     // Render the scene
-    rendererRender(_renderer!, _scene!, _camera!);
+    try {
+      rendererRender(_renderer!, _scene!, _camera!);
+    } catch (e) {
+      print('❌ [RENDERER] Error rendering: $e');
+      _isRendering = false;
+      return;
+    }
 
     // Request next frame
     _animationFrameId = html.window.requestAnimationFrame((_) {

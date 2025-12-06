@@ -6,24 +6,24 @@ import '../three_js_bindings.dart';
 class MiscObjectsGenerator {
   /// Generate a rocket (basic geometry: box + cone)
   JSObject generateRocket() {
-    // Create rocket body (box)
+    // Create rocket body (box) - NO lighting, NO emissive
     final bodyGeometry = BoxGeometry(0.5, 2.0, 0.5);
-    final bodyMaterial = MeshStandardMaterial(
+    final bodyMaterial = MeshBasicMaterial(
       ({
         'color': 0xff4444,
-        'emissive': 0xff0000,
-        'emissiveIntensity': 0.5,
+        // 'emissive': 0xff0000, // DISABLED - testing without emissive
+        // 'emissiveIntensity': 0.5, // DISABLED
       } as Map<String, dynamic>) as JSAny?,
     );
     final body = Mesh(bodyGeometry, bodyMaterial);
 
-    // Create rocket nose (cone)
+    // Create rocket nose (cone) - NO lighting, NO emissive
     final noseGeometry = ConeGeometry(0.3, 1.0, 8);
-    final noseMaterial = MeshStandardMaterial(
+    final noseMaterial = MeshBasicMaterial(
       ({
         'color': 0xff6666,
-        'emissive': 0xff0000,
-        'emissiveIntensity': 0.3,
+        // 'emissive': 0xff0000, // DISABLED - testing without emissive
+        // 'emissiveIntensity': 0.3, // DISABLED
       } as Map<String, dynamic>) as JSAny?,
     );
     final nose = Mesh(noseGeometry, noseMaterial);
@@ -38,15 +38,15 @@ class MiscObjectsGenerator {
 
   /// Generate a UFO (flying saucer: two cones)
   JSObject generateUFO() {
-    // Create top half (inverted cone)
+    // Create top half (inverted cone) - NO lighting, NO emissive
     final topGeometry = ConeGeometry(2.0, 0.5, 16);
-    final topMaterial = MeshStandardMaterial(
+    final topMaterial = MeshBasicMaterial(
       ({
         'color': 0x8888ff,
-        'emissive': 0x4444ff,
-        'emissiveIntensity': 0.6,
-        'metalness': 0.8,
-        'roughness': 0.2,
+        // 'emissive': 0x4444ff, // DISABLED - testing without emissive
+        // 'emissiveIntensity': 0.6, // DISABLED
+        // 'metalness': 0.8, // Not supported by MeshBasicMaterial
+        // 'roughness': 0.2, // Not supported by MeshBasicMaterial
       } as Map<String, dynamic>) as JSAny?,
     );
     final top = Mesh(topGeometry, topMaterial);
@@ -57,15 +57,15 @@ class MiscObjectsGenerator {
     // Use bridge helper - position is read-only in Three.js
     setObjectPosition(top as JSAny, 0.0, 0.25, 0.0);
 
-    // Create bottom half
+    // Create bottom half - NO lighting, NO emissive
     final bottomGeometry = ConeGeometry(2.0, 0.5, 16);
-    final bottomMaterial = MeshStandardMaterial(
+    final bottomMaterial = MeshBasicMaterial(
       ({
         'color': 0x8888ff,
-        'emissive': 0x4444ff,
-        'emissiveIntensity': 0.4,
-        'metalness': 0.8,
-        'roughness': 0.2,
+        // 'emissive': 0x4444ff, // DISABLED - testing without emissive
+        // 'emissiveIntensity': 0.4, // DISABLED
+        // 'metalness': 0.8, // Not supported by MeshBasicMaterial
+        // 'roughness': 0.2, // Not supported by MeshBasicMaterial
       } as Map<String, dynamic>) as JSAny?,
     );
     final bottom = Mesh(bottomGeometry, bottomMaterial);

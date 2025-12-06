@@ -18,11 +18,9 @@ class HUDOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Material with high elevation to ensure it's above canvas
-    return Material(
-      type: MaterialType.transparency,
-      elevation: 1000, // Very high elevation to ensure it's above canvas
-      child: Stack(
+    // Flutter widgets are automatically rendered above HTML canvas
+    // No need for Material elevation - Flutter handles z-index automatically
+    return Stack(
         clipBehavior: Clip.none, // Allow widgets to overflow if needed
         children: [
         // Top-left: User info and stats
@@ -50,10 +48,10 @@ class HUDOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildStatRow('Total Repos', '${stats['totalRepos'] ?? 0}'),
-                  _buildStatRow('Commits', '${stats['totalCommits'] ?? 0}'),
-                  _buildStatRow('Stars', '${stats['totalStars'] ?? 0}'),
-                  _buildStatRow('Forks', '${stats['totalForks'] ?? 0}'),
+                  _buildStatRow('Total Repos ', '${stats['totalRepos'] ?? 0}'),
+                  _buildStatRow('Commits ', '${stats['totalCommits'] ?? 0}'),
+                  _buildStatRow('Stars ', '${stats['totalStars'] ?? 0}'),
+                  _buildStatRow('Forks ', '${stats['totalForks'] ?? 0}'),
                   if (stats['mostActiveRepo'] != null) ...[
                     const SizedBox(height: 8),
                     const Divider(color: Colors.white24),
@@ -163,7 +161,6 @@ class HUDOverlay extends StatelessWidget {
           ),
         ),
       ],
-      ),
     );
   }
 
@@ -199,10 +196,14 @@ class HUDOverlay extends StatelessWidget {
           Text(icon, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           Flexible(
-            child: Text(
-              description,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-              overflow: TextOverflow.ellipsis,
+            child: Tooltip(
+              message: description,
+              waitDuration: const Duration(milliseconds: 250),
+              child: Text(
+                description,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],

@@ -441,8 +441,26 @@
   };
 
   window.rendererRender = function(renderer, scene, camera) {
-    if (renderer && typeof renderer.render === 'function') {
+    if (!renderer) {
+      console.error('[BRIDGE] rendererRender: renderer is null or undefined');
+      return;
+    }
+    if (typeof renderer.render !== 'function') {
+      console.error('[BRIDGE] rendererRender: renderer.render is not a function', renderer);
+      return;
+    }
+    if (!scene) {
+      console.error('[BRIDGE] rendererRender: scene is null or undefined');
+      return;
+    }
+    if (!camera) {
+      console.error('[BRIDGE] rendererRender: camera is null or undefined');
+      return;
+    }
+    try {
       renderer.render(scene, camera);
+    } catch (e) {
+      console.error('[BRIDGE] rendererRender error:', e);
     }
   };
 

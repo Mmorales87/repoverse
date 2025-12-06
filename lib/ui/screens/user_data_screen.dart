@@ -69,7 +69,7 @@ class UserDataScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // Enter Universe Button
-              Center(
+              /* Center(
                 child: ElevatedButton.icon(
                   onPressed: onEnterUniverse,
                   icon: const Icon(Icons.rocket_launch),
@@ -89,7 +89,7 @@ class UserDataScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
+              ), */
               const SizedBox(height: 32),
             ],
           ),
@@ -97,6 +97,10 @@ class UserDataScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => onEnterUniverse(),
+        child: const Icon(Icons.rocket_launch),
       ),
     );
   }
