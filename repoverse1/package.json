@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "lottie-web": "^5.13.0",
     "three": "^0.160.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
   }
 }
-

@@ -131,11 +131,11 @@ export class YearSelector {
     const mappingText = document.createElement('span');
     mappingText.textContent = 'Invertir mapping (antiguos más cerca)';
     
-    mappingLabel.appendChild(mappingCheckbox);
+/*     mappingLabel.appendChild(mappingCheckbox);
     mappingLabel.appendChild(mappingText);
     
     controlsRow.appendChild(playBtn);
-    controlsRow.appendChild(mappingLabel);
+    controlsRow.appendChild(mappingLabel); */
     
     selector.appendChild(yearLabel);
     selector.appendChild(slider);

@@ -6,6 +6,7 @@ import {
   generateBranches,
   generatePRs,
   generateComets,
+  generateDecorativeRocket,
   calculateOrbitalRadius,
   calculateOrbitalPosition,
   calculateOrbitalSpeed,
@@ -44,6 +45,11 @@ export class SceneManager {
     this.comets = [];
     this.orbitLines = [];
     this.planetAnimations = [];
+    
+    // Decorative rockets (independent of repositories)
+    this.decorativeRockets = [];
+    this.lastRocketSpawn = 0;
+    this.rocketSpawnInterval = 25000; // Spawn cada 25 segundos (menos frecuente)
     
     // Top-K planets by mass for LensPass
     this.topKPlanets = [];
@@ -223,9 +229,9 @@ export class SceneManager {
       );
       const spinSpeed = 0.001 + normalizedRecent * 0.02;
       
-      // Add eccentricity and inclination for variety (reduced eccentricity for better spacing)
+      // Add eccentricity for variety (reduced eccentricity for better spacing)
       const eccentricity = Math.random() * 0.05; // Reduced from 0.15 to 0.05 for less elliptical orbits
-      const inclination = (Math.random() - 0.5) * 0.2; // Reduced inclination
+      const inclination = 0; // NO inclination - all planets rotate in horizontal plane (XZ)
       
       this.planetAnimations.push({
         initialAngle: angle,
@@ -324,6 +330,10 @@ export class SceneManager {
     this.planetAnimations = [];
     this.topKPlanets = [];
     
+    // Clear decorative rockets
+    this.decorativeRockets = [];
+    this.lastRocketSpawn = 0;
+    
     // Clear orbit lines
     this.orbitLines.forEach(line => {
       if (this.scene) {
@@ -381,35 +391,32 @@ export class SceneManager {
       if (!animData) return;
       
       // Rotate planet (spin)
-      planet.rotation.x += animData.rotationSpeed.x * deltaTime;
-      planet.rotation.y += animData.rotationSpeed.y * deltaTime + animData.spinSpeed * deltaTime;
-      planet.rotation.z += animData.rotationSpeed.z * deltaTime;
+      planet.rotation.y += animData.rotationSpeed.x * deltaTime;
       
-      // Update orbital position with eccentricity and inclination
+      // Update orbital position with eccentricity (horizontal plane only)
       const angle = animData.initialAngle + elapsedTime * animData.orbitalSpeed;
       const baseRadius = animData.orbitalRadius;
       
       // Apply eccentricity (elliptical orbit)
       const radius = baseRadius * (1 + animData.eccentricity * Math.cos(angle));
       
-      // Calculate position in orbital plane
+      // Calculate position in horizontal plane (XZ) - NO vertical component
       const x = radius * Math.cos(angle);
       const z = radius * Math.sin(angle);
-      
-      // Apply inclination (tilt orbit)
-      const y = Math.sin(angle) * animData.inclination * baseRadius;
+      const y = 0; // All planets at same height (horizontal plane)
       
       const position = new THREE.Vector3(x, y, z);
       planet.position.copy(position);
       
-      // Update branches position (orbit around planet)
+      // Update branches position (orbit around planet in horizontal plane)
       if (this.branches[index]) {
         this.branches[index].forEach((branch, branchIndex) => {
           const branchOrbitRadius = branch.userData.orbitRadius;
           const branchAngle = elapsedTime * 0.5 + (branchIndex * Math.PI * 2 / this.branches[index].length);
+          // Orbit in horizontal plane (XZ) - same as planets
           const branchX = position.x + branchOrbitRadius * Math.cos(branchAngle);
-          const branchY = position.y + branchOrbitRadius * Math.sin(branchAngle);
-          const branchZ = position.z + branchOrbitRadius * 0.3 * Math.sin(branchAngle * 0.7);
+          const branchY = position.y; // Same height as planet (horizontal plane)
+          const branchZ = position.z + branchOrbitRadius * Math.sin(branchAngle);
           
           branch.position.set(branchX, branchY, branchZ);
         });
@@ -436,47 +443,176 @@ export class SceneManager {
         });
       }
       
-      // Update comets position (highly elliptical orbit with fade in/out)
+      // Update comets (rockets) position - cross system and fade in/out
       if (this.comets[index]) {
-        this.comets[index].forEach((comet) => {
+        // Filter out comets that should be removed
+        this.comets[index] = this.comets[index].filter((comet) => {
           const cometData = comet.userData;
+          
+          // Check if should be removed
+          if (cometData.shouldRemove) {
+            this.removeObject(comet);
+            // Dispose resources
+            comet.traverse((child) => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => mat.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
+            return false; // Remove from array
+          }
+          
           const cometAngle = elapsedTime * cometData.orbitSpeed;
           const cometRadius = cometData.orbitRadius * (1 + cometData.eccentricity * Math.cos(cometAngle));
           
+          // Position rocket crossing the system (not just orbiting one planet)
+          // Make it travel across the entire universe
           const cometX = position.x + cometRadius * Math.cos(cometAngle);
-          const cometY = position.y + cometRadius * Math.sin(cometAngle);
+          const cometY = position.y + cometRadius * Math.sin(cometAngle) + Math.sin(elapsedTime * 0.5) * 5; // Add vertical movement
           const cometZ = position.z + cometRadius * 0.5 * Math.sin(cometAngle * 0.5);
           
           comet.position.set(cometX, cometY, cometZ);
           
+          // Rotate rocket to face direction of travel
+          const nextAngle = cometAngle + 0.1;
+          const nextRadius = cometData.orbitRadius * (1 + cometData.eccentricity * Math.cos(nextAngle));
+          const nextX = position.x + nextRadius * Math.cos(nextAngle);
+          const nextY = position.y + nextRadius * Math.sin(nextAngle);
+          const nextZ = position.z + nextRadius * 0.5 * Math.sin(nextAngle * 0.5);
+          
+          const direction = new THREE.Vector3(nextX - cometX, nextY - cometY, nextZ - cometZ).normalize();
+          comet.lookAt(comet.position.clone().add(direction));
+          
           // Handle fade in/out animation
           const timeSinceCreation = (Date.now() - cometData.createdAt) / 1000; // seconds
           
-          // Fade in
           if (timeSinceCreation < cometData.fadeInTime) {
+            // Fade in
             const fadeProgress = timeSinceCreation / cometData.fadeInTime;
             cometData.opacity = fadeProgress;
-          } else {
+          } else if (timeSinceCreation < cometData.fadeInTime + cometData.visibleDuration) {
+            // Fully visible
             cometData.opacity = 1.0;
+          } else if (timeSinceCreation < cometData.fadeInTime + cometData.visibleDuration + cometData.fadeOutTime) {
+            // Fade out
+            const fadeOutProgress = (timeSinceCreation - cometData.fadeInTime - cometData.visibleDuration) / cometData.fadeOutTime;
+            cometData.opacity = 1.0 - fadeOutProgress;
+          } else {
+            // Should be removed
+            cometData.shouldRemove = true;
+            cometData.opacity = 0.0;
           }
-          
-          // Check if comet should fade out (commits no longer recent)
-          // This would need to be checked against repo data, but for now we'll keep it visible
-          // In a real implementation, you'd check repo.hasRecentCommits periodically
           
           // Apply opacity to materials
           comet.traverse((child) => {
             if (child.isMesh && child.material) {
               const materials = Array.isArray(child.material) ? child.material : [child.material];
               materials.forEach((mat) => {
-                if (mat.transparent !== undefined && mat.userData?.baseOpacity !== undefined) {
-                  mat.opacity = cometData.opacity * mat.userData.baseOpacity;
+                if (mat.transparent !== undefined) {
+                  if (mat.userData?.baseOpacity !== undefined) {
+                    mat.opacity = cometData.opacity * mat.userData.baseOpacity;
+                  } else {
+                    mat.opacity = cometData.opacity;
+                  }
                 }
               });
             }
           });
+          
+          return true; // Keep in array
         });
       }
+    });
+    
+    // ✅ GENERAR COHETES DECORATIVOS PERIÓDICAMENTE (independientes de repos)
+    const now = Date.now();
+    if (now - this.lastRocketSpawn > this.rocketSpawnInterval) {
+      const newRocket = generateDecorativeRocket();
+      const rocketData = newRocket.userData;
+      // Posición inicial MUY ALEJADA del centro para evitar planetas
+      const startAngle = rocketData.startAngle;
+      const startRadius = rocketData.orbitRadius;
+      newRocket.position.set(
+        startRadius * Math.cos(startAngle),
+        rocketData.verticalOffset, // Usar el offset vertical del userData
+        startRadius * Math.sin(startAngle)
+      );
+      this.decorativeRockets.push(newRocket);
+      this.addObject(newRocket);
+      this.lastRocketSpawn = now;
+    }
+    
+    // ✅ ANIMAR COHETES DECORATIVOS
+    this.decorativeRockets = this.decorativeRockets.filter((rocket) => {
+      const rocketData = rocket.userData;
+      
+      if (rocketData.shouldRemove) {
+        this.removeObject(rocket);
+        rocket.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+        return false;
+      }
+      
+      // Mover cohete cruzando el sistema - MUY ALEJADO para evitar planetas
+      const angle = elapsedTime * rocketData.orbitSpeed + rocketData.startAngle;
+      const radius = rocketData.orbitRadius * (1 + rocketData.eccentricity * Math.cos(angle));
+      
+      // Mantener altura vertical alejada del plano orbital de los planetas
+      const baseY = rocketData.verticalOffset || 0;
+      const verticalMovement = Math.sin(elapsedTime * 0.2) * 5; // Movimiento vertical suave
+      
+      rocket.position.x = radius * Math.cos(angle);
+      rocket.position.y = baseY + verticalMovement; // Mantener altura alejada de planetas
+      rocket.position.z = radius * Math.sin(angle);
+      
+      // Rotate rocket to face direction of travel
+      const nextAngle = angle + 0.1;
+      const nextRadius = rocketData.orbitRadius * (1 + rocketData.eccentricity * Math.cos(nextAngle));
+      const nextX = nextRadius * Math.cos(nextAngle);
+      const nextY = rocket.position.y;
+      const nextZ = nextRadius * Math.sin(nextAngle);
+      
+      const direction = new THREE.Vector3(nextX - rocket.position.x, nextY - rocket.position.y, nextZ - rocket.position.z).normalize();
+      rocket.lookAt(rocket.position.clone().add(direction));
+      
+      // Fade in/out
+      const timeSinceCreation = (Date.now() - rocketData.createdAt) / 1000;
+      if (timeSinceCreation < rocketData.fadeInTime) {
+        rocketData.opacity = timeSinceCreation / rocketData.fadeInTime;
+      } else if (timeSinceCreation < rocketData.fadeInTime + rocketData.visibleDuration) {
+        rocketData.opacity = 1.0;
+      } else if (timeSinceCreation < rocketData.fadeInTime + rocketData.visibleDuration + rocketData.fadeOutTime) {
+        const fadeOutProgress = (timeSinceCreation - rocketData.fadeInTime - rocketData.visibleDuration) / rocketData.fadeOutTime;
+        rocketData.opacity = 1.0 - fadeOutProgress;
+      } else {
+        rocketData.shouldRemove = true;
+      }
+      
+      // Aplicar opacity
+      rocket.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat.transparent !== undefined) {
+              mat.opacity = rocketData.opacity * (mat.userData?.baseOpacity || 1.0);
+            }
+          });
+        }
+      });
+      
+      return true;
     });
   }
 

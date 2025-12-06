@@ -131,7 +131,7 @@ export function calculateOrbitalRadius(daysSinceCreationAtSnapshot, index, ageMa
   const maxEccentricityFactor = 1 + maxEccentricity; // e.g., 1.05 for 5% max eccentricity
   const baseSpacing = Math.max(15, planetRadius * 2 * maxEccentricityFactor); // Base spacing considering max orbit radius
   // Increase spacing multiplier for better distribution with many planets
-  const spacing = baseSpacing * 1.5; // Increased multiplier for better spacing
+  const spacing = baseSpacing * 0.8; // Increased multiplier for better spacing
   const indexOffset = index * spacing;
   
   // Final radius must account for the maximum reach of elliptical orbit
@@ -319,28 +319,35 @@ export function generatePlanet(repo, index) {
   
   const textureLoader = new THREE.TextureLoader();
   
-  // Create material first with subtle color tint (reduced intensity for better texture visibility)
-  // Use white as base color and apply language color as a subtle tint
+  // Create material with language color as base (not white, to avoid transparency)
+  // The texture will be applied on top with color multiplication
   const material = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF, // White base to show texture clearly
+    color: color, // Language color as base (will be multiplied with texture)
     emissive: color, // Language color as subtle emissive tint
-    emissiveIntensity: 0.15 // Reduced from 0.3 - subtle tint that doesn't overpower texture
+    emissiveIntensity: 0.2, // Subtle emissive glow
+    transparent: false, // Not transparent
+    opacity: 1.0 // Fully opaque
   });
   
-  // Load texture and apply it
+  // Load texture and apply it (texture will tint the base color)
   textureLoader.load(
     texturePath,
     (texture) => {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 4; // Better texture quality
       material.map = texture;
-      // Don't use texture as emissiveMap to keep color tint visible but subtle
+      // Use texture as emissiveMap too for better visibility
+      material.emissiveMap = texture;
       material.needsUpdate = true;
       console.log(`[GENERATORS] ✅ Planet texture ${textureIndex} loaded for ${repo.name}`);
     },
     undefined,
     (error) => {
       console.warn(`[GENERATORS] Could not load planet texture ${textureIndex}:`, error);
+      // If texture fails, ensure material is still visible
+      material.color.setHex(color);
+      material.emissive.setHex(color);
     }
   );
   
@@ -560,8 +567,9 @@ export function generatePRs(repo, planetRadius, numBranches) {
 }
 
 /**
- * Generate comets for recent commits (24-48h)
- * Comets appear temporarily and orbit with high eccentricity
+ * Generate comets (rockets) for recent commits (24-48h)
+ * Rockets appear temporarily, cross the system, and disappear
+ * Uses GLB model Rocket-Across.glb
  */
 export function generateComets(repo, planetRadius, orbitalRadius) {
   const comets = [];
@@ -569,64 +577,170 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
   // Check if repo has recent commits
   if (!repo.hasRecentCommits) return comets;
   
-  // Create a single comet per repo with recent activity
+  // Create a single rocket/comet per repo with recent activity
   const cometGroup = new THREE.Group();
   
-  // Comet head (sphere)
-  const headSize = 0.3;
-  const headGeometry = new THREE.SphereGeometry(headSize, 16, 16);
-  const headMaterial = new THREE.MeshStandardMaterial({
-    color: 0x87CEEB, // Sky blue
-    emissive: 0x87CEEB,
-    emissiveIntensity: 0.8,
-    transparent: true,
-    opacity: 0.0 // Start invisible, will fade in
-  });
-  headMaterial.userData.baseOpacity = 0.7; // Store base opacity
-  const head = new THREE.Mesh(headGeometry, headMaterial);
-  cometGroup.add(head);
+  const loader = new GLTFLoader();
+  const cometSize = 1.2; // Size of the rocket
   
-  // Comet tail (cone pointing away from planet)
-  const tailLength = 1.0;
-  const tailRadius = 0.15;
-  const tailGeometry = new THREE.ConeGeometry(tailRadius, tailLength, 8);
-  const tailMaterial = new THREE.MeshStandardMaterial({
-    color: 0x87CEEB,
-    emissive: 0x87CEEB,
-    emissiveIntensity: 0.6,
-    transparent: true,
-    opacity: 0.0, // Start invisible, will fade in
-    side: THREE.DoubleSide
-  });
-  tailMaterial.userData.baseOpacity = 0.5; // Store base opacity
-  const tail = new THREE.Mesh(tailGeometry, tailMaterial);
-  tail.position.y = -tailLength / 2; // Position tail behind head
-  tail.rotation.x = Math.PI; // Point tail away
-  cometGroup.add(tail);
+  // Load rocket model
+  loader.load(
+    '/models/Rocket-Across.glb',
+    (gltf) => {
+      const rocketModel = gltf.scene;
+      
+      // Scale model to appropriate size
+      const box = new THREE.Box3().setFromObject(rocketModel);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = cometSize / maxDim;
+      rocketModel.scale.set(scale, scale, scale);
+      
+      // Make all materials transparent initially (will fade in)
+      rocketModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat.transparent !== undefined) {
+              mat.transparent = true;
+              mat.opacity = 0.0; // Start invisible
+              mat.userData.baseOpacity = 1.0; // Store base opacity
+            }
+          });
+        }
+      });
+      
+      cometGroup.add(rocketModel);
+      console.log('[GENERATORS] ✅ Rocket model loaded for comet');
+    },
+    undefined,
+    (error) => {
+      console.warn('[GENERATORS] Could not load rocket model, using fallback:', error);
+      // Fallback: simple sphere if model fails
+      const fallbackGeometry = new THREE.SphereGeometry(cometSize * 0.5, 16, 16);
+      const fallbackMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFF6B35, // Orange-red like rocket
+        emissive: 0xFF6B35,
+        emissiveIntensity: 0.8,
+        transparent: true,
+        opacity: 0.0
+      });
+      fallbackMaterial.userData.baseOpacity = 1.0;
+      const fallback = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+      cometGroup.add(fallback);
+    }
+  );
   
-  // Calculate comet orbit (highly elliptical, outside branches/PRs)
-  const cometOrbitRadius = orbitalRadius * 1.5; // Further out
-  const cometEccentricity = 0.7; // High eccentricity for pronounced ellipse
+  // Calculate comet orbit (highly elliptical, crosses the system)
+  // Make it travel across the entire system, not just around one planet
+  const cometOrbitRadius = orbitalRadius * 2.0; // Far out to cross system
+  const cometEccentricity = 0.9; // Very high eccentricity for crossing trajectory
   
   cometGroup.userData = {
     type: 'comet',
     orbitRadius: cometOrbitRadius,
     eccentricity: cometEccentricity,
-    orbitSpeed: 0.8 / Math.sqrt(cometOrbitRadius),
-    fadeInTime: 2.0, // 2 seconds to fade in
-    fadeOutTime: 2.0, // 2 seconds to fade out
+    orbitSpeed: 1.2 / Math.sqrt(cometOrbitRadius), // Faster to cross quickly
+    fadeInTime: 1.5, // 1.5 seconds to fade in
+    fadeOutTime: 1.5, // 1.5 seconds to fade out
+    visibleDuration: 18.0, // Visible for 8 seconds total
     isVisible: true,
-    opacity: 0.0, // Start invisible, will fade in
-    createdAt: Date.now()
+    shouldRemove: false, // Flag to remove from scene
+    opacity: 1, // Start invisible, will fade in
+    createdAt: Date.now(),
+    repoName: repo.name // Store repo name to check if still recent
   };
-  
-  // Set initial opacity to 0 (will fade in)
-  headMaterial.opacity = 0.0;
-  tailMaterial.opacity = 0.0;
   
   comets.push(cometGroup);
   
   return comets;
+}
+
+/**
+ * Generate decorative rockets that cross the system periodically
+ * Independent of repositories - like ships or clouds in GitHub City
+ */
+export function generateDecorativeRocket() {
+  const rocketGroup = new THREE.Group();
+  
+  const loader = new GLTFLoader();
+  const rocketSize = 2.2;
+  
+  loader.load(
+    '/models/Rocket-Across.glb',
+    (gltf) => {
+      const rocketModel = gltf.scene;
+      const box = new THREE.Box3().setFromObject(rocketModel);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = rocketSize / maxDim;
+      rocketModel.scale.set(scale, scale, scale);
+      
+      rocketModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            // Make material visible with emission (like PRs)
+            if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
+              // Preserve original color but add emission for visibility
+              const originalColor = mat.color ? mat.color.getHex() : 0xFFFFFF;
+              mat.color.setHex(originalColor);
+              mat.emissive.setHex(originalColor);
+              mat.emissiveIntensity = 0.5; // Make it glow so it's visible
+            }
+            if (mat.transparent !== undefined) {
+              mat.transparent = true;
+              mat.opacity = 0.0;
+              mat.userData.baseOpacity = 1.0;
+            }
+          });
+        }
+      });
+      
+      rocketGroup.add(rocketModel);
+      console.log('[GENERATORS] ✅ Decorative rocket model loaded');
+    },
+    undefined,
+    (error) => {
+      console.warn('[GENERATORS] Could not load decorative rocket:', error);
+      // Fallback
+      const fallbackGeometry = new THREE.SphereGeometry(rocketSize * 0.5, 16, 16);
+      const fallbackMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFF6B35,
+        emissive: 0xFF6B35,
+        emissiveIntensity: 0.8,
+        transparent: true,
+        opacity: 0.0
+      });
+      fallbackMaterial.userData.baseOpacity = 1.0;
+      const fallback = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+      rocketGroup.add(fallback);
+    }
+  );
+  
+  // Random starting position and trajectory - MUY ALEJADO del centro para evitar planetas
+  const startAngle = Math.random() * Math.PI * 2;
+  const orbitRadius = 150 + Math.random() * 80; // Mucho más lejos del centro (150-230)
+  const eccentricity = 0.7 + Math.random() * 0.2; // Menos excéntrico para trayectorias más suaves
+  
+  // Altura vertical aleatoria para evitar el plano orbital de los planetas
+  const verticalOffset = (Math.random() - 0.5) * 60; // -30 a +30 en Y
+  
+  rocketGroup.userData = {
+    type: 'decorativeRocket',
+    startAngle: startAngle,
+    orbitRadius: orbitRadius,
+    eccentricity: eccentricity,
+    verticalOffset: verticalOffset, // Altura para evitar planetas
+    orbitSpeed: (0.3 + Math.random() * 0.5) / Math.sqrt(orbitRadius), // Más lento
+    fadeInTime: 2.0,
+    fadeOutTime: 2.0,
+    visibleDuration: 20.0 + Math.random() * 15.0, // 20-35 seconds
+    createdAt: Date.now(),
+    shouldRemove: false
+  };
+  
+  return rocketGroup;
 }
 
 /**
@@ -651,12 +765,10 @@ export function generateOrbitLine(orbitalRadius, eccentricity = 0, inclination =
     // Apply eccentricity (elliptical orbit)
     const radius = orbitalRadius * (1 + eccentricity * Math.cos(angle));
     
-    // Calculate position in orbital plane
+    // Calculate position in horizontal plane (XZ) - NO vertical component
     const x = radius * Math.cos(angle);
     const z = radius * Math.sin(angle);
-    
-    // Apply inclination (tilt orbit)
-    const y = Math.sin(angle) * inclination * orbitalRadius;
+    const y = 0; // All orbits in horizontal plane
     
     points.push(new THREE.Vector3(x, y, z));
   }
@@ -665,8 +777,8 @@ export function generateOrbitLine(orbitalRadius, eccentricity = 0, inclination =
   
   // Thin, almost transparent line material
   const material = new THREE.LineBasicMaterial({
-    color: 0xFFFFFF,
-    opacity: 0.3,
+    color: 0xF5F5F5,
+    opacity: 0.2,
     transparent: true,
     linewidth: 1,
     depthTest: false,

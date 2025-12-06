@@ -1,3 +1,5 @@
+import lottie from 'lottie-web';
+
 /**
  * Home Screen - Initial input screen
  */
@@ -6,6 +8,7 @@ export class HomeScreen {
     this.container = container;
     this.onGenerate = onGenerate;
     this.elements = {};
+    this.lottieAnimation = null; // Store Lottie animation instance
   }
 
   /**
@@ -165,14 +168,14 @@ export class HomeScreen {
       z-index: 2001;
     `;
     
-    const spinner = document.createElement('div');
-    spinner.style.cssText = `
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.2);
-      border-top-color: #64b5f6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+    // Lottie animation container
+    const lottieContainer = document.createElement('div');
+    lottieContainer.id = 'home-lottie-container';
+    lottieContainer.style.cssText = `
+      width: 300px;
+      height: 450px;
+      max-width: 90vw;
+      max-height: 60vh;
     `;
     
     const loadingText = document.createElement('p');
@@ -183,15 +186,7 @@ export class HomeScreen {
       opacity: 0.8;
     `;
     
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    loading.appendChild(spinner);
+    loading.appendChild(lottieContainer);
     loading.appendChild(loadingText);
     home.appendChild(loading);
     
@@ -201,7 +196,8 @@ export class HomeScreen {
       home,
       input,
       generateBtn,
-      loading
+      loading,
+      lottieContainer
     };
   }
 
@@ -216,6 +212,20 @@ export class HomeScreen {
       this.elements.generateBtn.disabled = true;
       this.elements.generateBtn.textContent = 'Cargando...';
     }
+    
+    // Load Lottie animation if not already loaded
+    if (this.elements.lottieContainer && !this.lottieAnimation) {
+      this.lottieAnimation = lottie.loadAnimation({
+        container: this.elements.lottieContainer,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: '/json/loading_rocket.json'
+      });
+    } else if (this.lottieAnimation) {
+      // Resume animation if it already exists
+      this.lottieAnimation.play();
+    }
   }
 
   /**
@@ -228,6 +238,11 @@ export class HomeScreen {
     if (this.elements.generateBtn) {
       this.elements.generateBtn.disabled = false;
       this.elements.generateBtn.textContent = 'Generar Universo';
+    }
+    
+    // Pause Lottie animation (but don't destroy it, so it can be reused)
+    if (this.lottieAnimation) {
+      this.lottieAnimation.pause();
     }
   }
 
@@ -280,6 +295,12 @@ export class HomeScreen {
    * Dispose home screen
    */
   dispose() {
+    // Destroy Lottie animation
+    if (this.lottieAnimation) {
+      this.lottieAnimation.destroy();
+      this.lottieAnimation = null;
+    }
+    
     if (this.elements.home) {
       this.elements.home.remove();
     }
