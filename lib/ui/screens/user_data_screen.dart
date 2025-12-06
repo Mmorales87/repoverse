@@ -29,47 +29,53 @@ class UserDataScreen extends StatelessWidget {
             speed: 1.0,
             mouseInteraction: true,
             mouseRepulsion: true,
-            child: const SizedBox.shrink(), // Empty child, canvas is added to DOM
+            child:
+                const SizedBox.shrink(), // Empty child, canvas is added to DOM
           ),
           // Content on top
           Container(
-            color: Colors.black.withOpacity(0.4), // Subtle overlay for readability
+            color: Colors.black.withOpacity(
+              0.4,
+            ), // Subtle overlay for readability
             child: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 16),
-                  const Text(
-                    'Your Git Universe',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Your Git Universe',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-              // Stats Cards
-              _buildStatsSection(),
-              const SizedBox(height: 32),
+                    // Stats Cards
+                    _buildStatsSection(),
+                    const SizedBox(height: 32),
 
-              // Repositories List
-              _buildRepositoriesSection(),
-              const SizedBox(height: 32),
+                    // Repositories List
+                    _buildRepositoriesSection(),
+                    const SizedBox(height: 32),
 
-              // Enter Universe Button
-              /* Center(
+                    // Enter Universe Button
+                    /* Center(
                 child: ElevatedButton.icon(
                   onPressed: onEnterUniverse,
                   icon: const Icon(Icons.rocket_launch),
@@ -90,17 +96,22 @@ class UserDataScreen extends StatelessWidget {
                   ),
                 ),
               ), */
-              const SizedBox(height: 32),
-            ],
-          ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => onEnterUniverse(),
-        child: const Icon(Icons.rocket_launch),
+        label: const Text('Enter 3D Universe'),
+        icon: const Icon(Icons.rocket_launch),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -159,7 +170,12 @@ class UserDataScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       width: 150,
       padding: const EdgeInsets.all(16),
@@ -178,10 +194,7 @@ class UserDataScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -205,7 +218,7 @@ class UserDataScreen extends StatelessWidget {
     // Separate own repos and forks
     final ownRepos = repositories.where((r) => !r.isFork).toList();
     final forkRepos = repositories.where((r) => r.isFork).toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,7 +242,8 @@ class UserDataScreen extends StatelessWidget {
               itemCount: ownRepos.length,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) => _buildRepoCard(ownRepos[index], isFork: false),
+              itemBuilder: (context, index) =>
+                  _buildRepoCard(ownRepos[index], isFork: false),
             );
           },
         ),
@@ -261,7 +275,8 @@ class UserDataScreen extends StatelessWidget {
                 itemCount: forkRepos.length,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (context, index) => _buildRepoCard(forkRepos[index], isFork: true),
+                itemBuilder: (context, index) =>
+                    _buildRepoCard(forkRepos[index], isFork: true),
               );
             },
           ),
@@ -273,7 +288,7 @@ class UserDataScreen extends StatelessWidget {
   Widget _buildRepoCard(RepositoryData repo, {bool isFork = false}) {
     final primaryLang = repo.primaryLanguage ?? 'Unknown';
     final langPercentages = repo.languagePercentages;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -301,7 +316,10 @@ class UserDataScreen extends StatelessWidget {
               ),
               if (isFork)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey[700],
                     borderRadius: BorderRadius.circular(4),
@@ -319,7 +337,7 @@ class UserDataScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: repo.source == 'github' 
+                  color: repo.source == 'github'
                       ? Colors.purple.withOpacity(0.3)
                       : Colors.blue.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(4),
@@ -327,7 +345,9 @@ class UserDataScreen extends StatelessWidget {
                 child: Text(
                   repo.source.toUpperCase(),
                   style: TextStyle(
-                    color: repo.source == 'github' ? Colors.purple : Colors.blue,
+                    color: repo.source == 'github'
+                        ? Colors.purple
+                        : Colors.blue,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -347,7 +367,11 @@ class UserDataScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildRepoStat(Icons.commit, '${repo.totalCommits}', Colors.green),
+              _buildRepoStat(
+                Icons.commit,
+                '${repo.totalCommits}',
+                Colors.green,
+              ),
               const SizedBox(width: 16),
               _buildRepoStat(Icons.star, '${repo.stars}', Colors.amber),
               const SizedBox(width: 16),
@@ -377,7 +401,10 @@ class UserDataScreen extends StatelessWidget {
               runSpacing: 4,
               children: langPercentages.entries.take(3).map((entry) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey[800],
                     borderRadius: BorderRadius.circular(4),
@@ -402,10 +429,13 @@ class UserDataScreen extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           value,
-          style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
   }
 }
-

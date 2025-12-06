@@ -42,8 +42,9 @@ class _WebGLCanvasState extends State<WebGLCanvas> {
     _canvas!.style.position = 'fixed';
     _canvas!.style.left = '0px';
     _canvas!.style.top = '0px';
-    _canvas!.style.pointerEvents = 'auto';
+    _canvas!.style.pointerEvents = 'auto'; // Canvas must receive mouse events for controls
     _canvas!.style.zIndex = '-999'; // Very low z-index to ensure it's behind everything
+    _canvas!.style.touchAction = 'none'; // Prevent default touch actions
     _canvas!.style.display = 'block'; // Ensure it's visible
     _canvas!.style.backgroundColor = 'transparent'; // Transparent background
     _canvas!.style.margin = '0';

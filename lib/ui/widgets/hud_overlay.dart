@@ -128,35 +128,41 @@ class HUDOverlay extends StatelessWidget {
             ),
           ),
         ),
-        // Top-right: Share card button
+        // Top-right: Share card button - Allow pointer events
         Positioned(
           top: 16,
           right: 16,
-          child: SafeArea(
-            child: ElevatedButton.icon(
-              onPressed: () => _showShareCard(context),
-              icon: const Icon(Icons.share),
-              label: const Text('Share Card'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+          child: IgnorePointer(
+            ignoring: false, // This button needs to receive events
+            child: SafeArea(
+              child: ElevatedButton.icon(
+                onPressed: () => _showShareCard(context),
+                icon: const Icon(Icons.share),
+                label: const Text('Share Card'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        // Bottom-right: Camera reset button
+        // Bottom-right: Camera reset button - Allow pointer events
         Positioned(
           bottom: 16,
           right: 16,
-          child: SafeArea(
-            child: FloatingActionButton(
-              onPressed: onResetCamera,
-              backgroundColor: Colors.indigo,
-              child: const Icon(Icons.refresh),
+          child: IgnorePointer(
+            ignoring: false, // This button needs to receive events
+            child: SafeArea(
+              child: FloatingActionButton(
+                onPressed: onResetCamera,
+                backgroundColor: Colors.indigo,
+                child: const Icon(Icons.refresh),
+              ),
             ),
           ),
         ),

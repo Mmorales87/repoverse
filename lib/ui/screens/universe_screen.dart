@@ -247,14 +247,18 @@ class _UniverseScreenState extends State<UniverseScreen> {
     // No need to reposition here
     
     // Force canvas size update before starting renderer
-    // This ensures the canvas has the correct size before rendering starts
-    final canvasWidth = (canvas.width ?? 800).clamp(100, 10000);
-    final canvasHeight = (canvas.height ?? 600).clamp(100, 10000);
+    // Use window size directly, not canvas size (canvas may have incorrect size)
+    final windowWidth = html.window.innerWidth ?? 800;
+    final windowHeight = html.window.innerHeight ?? 600;
+    final canvasWidth = windowWidth.clamp(100, 10000);
+    final canvasHeight = windowHeight.clamp(100, 10000);
+    
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
     canvas.style.width = '${canvasWidth}px';
     canvas.style.height = '${canvasHeight}px';
-    print('   [DEBUG] Canvas size forced: ${canvasWidth}x${canvasHeight}');
+    canvas.style.pointerEvents = 'auto'; // Ensure canvas can receive mouse events
+    print('   [DEBUG] Canvas size forced: ${canvasWidth}x${canvasHeight} (window: ${windowWidth}x${windowHeight})');
     
     // Force renderer to update size immediately
     _renderer.setScene(_sceneManager.scene!);
@@ -497,15 +501,13 @@ class _UniverseScreenState extends State<UniverseScreen> {
         clipBehavior: Clip.none, // Allow widgets to overflow if needed
         children: [
           // 3D Canvas - Behind everything
-          // Canvas is added directly to document.body with z-index 0
+          // Canvas is added directly to document.body with z-index -999
           // This widget is just a placeholder to trigger initialization
+          // Don't use IgnorePointer - let events pass through to canvas
           Positioned.fill(
-            child: IgnorePointer(
-              ignoring: true, // Canvas handles its own pointer events
-              child: WebGLCanvas(
-                onCanvasReady: _onCanvasReady,
-                child: const SizedBox.expand(),
-              ),
+            child: WebGLCanvas(
+              onCanvasReady: _onCanvasReady,
+              child: const SizedBox.expand(),
             ),
           ),
           // Error overlay if Three.js failed
@@ -576,13 +578,14 @@ class _UniverseScreenState extends State<UniverseScreen> {
             ),
           // HUD Overlay - ALWAYS visible, positioned on top
           // Use Material with high elevation to ensure it's above canvas
-          // Flutter widgets are rendered in a separate layer, but Material elevation helps
+          // Use IgnorePointer to allow mouse events to pass through to canvas
+          // HUD elements handle their own pointer events internally
           Positioned.fill(
             child: Material(
               type: MaterialType.transparency,
               elevation: 1000, // Very high elevation
               child: IgnorePointer(
-                ignoring: false, // Allow interaction with HUD buttons
+                ignoring: true, // Allow mouse events to pass through to canvas for camera controls
                 child: _isInitialized && !_threeJsError
                     ? HUDOverlay(
                         stats: widget.stats,
