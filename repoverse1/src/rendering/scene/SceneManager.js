@@ -3,11 +3,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   generateSun,
   generatePlanet,
-  generateRings,
-  generateMoons,
+  generateBranches,
   generatePRs,
-  generateReleases,
-  generateIssues,
+  generateComets,
   calculateOrbitalRadius,
   calculateOrbitalPosition,
   calculateOrbitalSpeed,
@@ -41,21 +39,15 @@ export class SceneManager {
     // Objects
     this.sun = null;
     this.planets = [];
-    this.rings = [];
-    this.moons = [];
+    this.branches = [];
     this.prs = [];
-    this.releases = [];
-    this.issues = [];
+    this.comets = [];
     this.orbitLines = [];
     this.planetAnimations = [];
     
     // Top-K planets by mass for LensPass
     this.topKPlanets = [];
     this.K = 8;
-    
-    // Debug mode
-    this.debugMode = false;
-    this.debugLines = [];
     
     this.initialized = false;
   }
@@ -144,142 +136,6 @@ export class SceneManager {
   }
 
   /**
-   * Toggle debug mode (show radii lines)
-   */
-  toggleDebugMode() {
-    this.debugMode = !this.debugMode;
-    
-    if (this.debugMode) {
-      this.createDebugLines();
-    } else {
-      this.removeDebugLines();
-    }
-  }
-
-  /**
-   * Create debug lines for all planets
-   */
-  createDebugLines() {
-    this.removeDebugLines(); // Clear existing
-    
-    this.planets.forEach((planet, index) => {
-      const planetRadius = planet.children[0].userData.radius;
-      const repo = planet.children[0].userData.repo;
-      const { innerRadius, outerRadius } = calculateRingDimensions(
-        planetRadius,
-        repo?.branchesCount || 1
-      );
-      
-      // Get current planet position
-      const position = planet.position;
-      
-      // Create lines for planet radius, ring inner/outer, moon orbits
-      const lines = this.createPlanetDebugLines(position, planetRadius, innerRadius, outerRadius, index);
-      lines.forEach(line => {
-        this.scene.add(line);
-        this.debugLines.push(line);
-      });
-    });
-  }
-
-  /**
-   * Create debug lines for a single planet
-   */
-  createPlanetDebugLines(position, planetRadius, ringInnerRadius, ringOuterRadius, planetIndex) {
-    const lines = [];
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
-    
-    // Planet radius circle
-    const planetCircle = this.createCircleLine(position, planetRadius, lineMaterial);
-    lines.push(planetCircle);
-    
-    // Ring inner radius circle
-    const ringInnerCircle = this.createCircleLine(position, ringInnerRadius, new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 }));
-    lines.push(ringInnerCircle);
-    
-    // Ring outer radius circle
-    const ringOuterCircle = this.createCircleLine(position, ringOuterRadius, new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.5 }));
-    lines.push(ringOuterCircle);
-    
-    // Moon orbit circles
-    if (this.moons[planetIndex]) {
-      this.moons[planetIndex].forEach((moon, moonIndex) => {
-        const moonOrbitRadius = moon.userData.orbitRadius;
-        const moonCircle = this.createCircleLine(position, moonOrbitRadius, new THREE.LineBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.3 }));
-        lines.push(moonCircle);
-      });
-    }
-    
-    return lines;
-  }
-
-  /**
-   * Create circle line for debug
-   */
-  createCircleLine(center, radius, material) {
-    const segments = 32;
-    const points = [];
-    
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      points.push(new THREE.Vector3(
-        center.x + radius * Math.cos(angle),
-        center.y,
-        center.z + radius * Math.sin(angle)
-      ));
-    }
-    
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    return new THREE.Line(geometry, material);
-  }
-
-  /**
-   * Update debug lines positions
-   */
-  updateDebugLines(planetIndex, position, planetRadius, ringOuterRadius) {
-    // Remove old lines for this planet
-    const linesToRemove = this.debugLines.filter((line, idx) => {
-      return line.userData.planetIndex === planetIndex;
-    });
-    
-    linesToRemove.forEach(line => {
-      this.scene.remove(line);
-      const index = this.debugLines.indexOf(line);
-      if (index > -1) {
-        this.debugLines.splice(index, 1);
-      }
-    });
-    
-    // Create new lines
-    const repo = this.planets[planetIndex].children[0].userData.repo;
-    const { innerRadius, outerRadius } = calculateRingDimensions(
-      planetRadius,
-      repo?.branchesCount || 1
-    );
-    
-    const newLines = this.createPlanetDebugLines(position, planetRadius, innerRadius, outerRadius, planetIndex);
-    newLines.forEach(line => {
-      line.userData.planetIndex = planetIndex;
-      this.scene.add(line);
-      this.debugLines.push(line);
-    });
-  }
-
-  /**
-   * Remove all debug lines
-   */
-  removeDebugLines() {
-    this.debugLines.forEach(line => {
-      if (this.scene) {
-        this.scene.remove(line);
-      }
-      if (line.geometry) line.geometry.dispose();
-      if (line.material) line.material.dispose();
-    });
-    this.debugLines = [];
-  }
-
-  /**
    * Generate universe from repositories
    */
   generateUniverse(repositories, userData = {}) {
@@ -301,7 +157,7 @@ export class SceneManager {
     // Calculate max commits for normalization
     const maxCommitsLast30 = Math.max(...repositories.map(r => r.commitsLast30 || 0), 1);
     
-    // Generate planets, rings, moons, PRs, releases, issues
+    // Generate planets, branches, PRs, comets
     repositories.forEach((repo, index) => {
       // Get daysSinceCreationAtSnapshot (calculated in app.js)
       const daysSinceCreationAtSnapshot = repo.daysSinceCreationAtSnapshot || repo.daysSinceCreation || 0;
@@ -333,50 +189,28 @@ export class SceneManager {
       this.planets.push(planet);
       this.addObject(planet);
       
-      // Generate rings
-      const repoRings = generateRings(repo, planetRadius);
-      this.rings.push(repoRings);
-      repoRings.forEach(ring => {
-        ring.position.copy(position);
-        this.addObject(ring);
+      // Generate branches
+      const repoBranches = generateBranches(repo, planetRadius);
+      this.branches.push(repoBranches);
+      repoBranches.forEach(branch => {
+        branch.position.copy(position);
+        this.addObject(branch);
       });
       
-      // Calculate ring outer radius for moon positioning
-      const { outerRadius: ringOuterRadius } = calculateRingDimensions(
-        planetRadius,
-        repo.branchesCount || 1
-      );
-      
-      // Generate moons
-      const repoMoons = generateMoons(repo, planetRadius, ringOuterRadius);
-      this.moons.push(repoMoons);
-      repoMoons.forEach(moon => {
-        moon.position.copy(position);
-        this.addObject(moon);
-      });
-      
-      // Generate PRs (satellites)
-      const repoPRs = generatePRs(repo, planetRadius, ringOuterRadius, repoMoons.length);
+      // Generate PRs (GLTF models)
+      const repoPRs = generatePRs(repo, planetRadius, repoBranches.length);
       this.prs.push(repoPRs);
       repoPRs.forEach(pr => {
         pr.position.copy(position);
         this.addObject(pr);
       });
       
-      // Generate Releases (capsules)
-      const repoReleases = generateReleases(repo, planetRadius, ringOuterRadius, repoMoons.length, repoPRs.length);
-      this.releases.push(repoReleases);
-      repoReleases.forEach(release => {
-        release.position.copy(position);
-        this.addObject(release);
-      });
-      
-      // Generate Issues (particle storms on surface)
-      const repoIssues = generateIssues(repo, planetRadius);
-      this.issues.push(repoIssues);
-      repoIssues.forEach(issue => {
-        issue.position.copy(position);
-        this.addObject(issue);
+      // Generate comets (for recent commits)
+      const repoComets = generateComets(repo, planetRadius, orbitalRadius);
+      this.comets.push(repoComets);
+      repoComets.forEach(comet => {
+        comet.position.copy(position);
+        this.addObject(comet);
       });
       
       // Store animation data
@@ -483,22 +317,12 @@ export class SceneManager {
     
     this.sun = null;
     this.planets = [];
-    this.rings = [];
-    this.moons = [];
+    this.branches = [];
     this.prs = [];
-    this.releases = [];
-    this.issues = [];
+    this.comets = [];
     this.orbitLines = [];
     this.planetAnimations = [];
     this.topKPlanets = [];
-    
-    // Clear debug lines
-    this.debugLines.forEach(line => {
-      if (this.scene) {
-        this.scene.remove(line);
-      }
-    });
-    this.debugLines = [];
     
     // Clear orbit lines
     this.orbitLines.forEach(line => {
@@ -578,30 +402,79 @@ export class SceneManager {
       const position = new THREE.Vector3(x, y, z);
       planet.position.copy(position);
       
-      // Update rings position (follow planet)
-      if (this.rings[index]) {
-        this.rings[index].forEach(ring => {
-          ring.position.copy(position);
+      // Update branches position (orbit around planet)
+      if (this.branches[index]) {
+        this.branches[index].forEach((branch, branchIndex) => {
+          const branchOrbitRadius = branch.userData.orbitRadius;
+          const branchAngle = elapsedTime * 0.5 + (branchIndex * Math.PI * 2 / this.branches[index].length);
+          const branchX = position.x + branchOrbitRadius * Math.cos(branchAngle);
+          const branchY = position.y + branchOrbitRadius * Math.sin(branchAngle);
+          const branchZ = position.z + branchOrbitRadius * 0.3 * Math.sin(branchAngle * 0.7);
+          
+          branch.position.set(branchX, branchY, branchZ);
         });
       }
       
-      // Update moons position (orbit around planet)
-      if (this.moons[index]) {
-        const planetRadius = planet.children[0].userData.radius;
-        const repo = this.planets[index].children[0].userData.repo;
-        const { outerRadius: ringOuterRadius } = calculateRingDimensions(
-          planetRadius,
-          repo?.branchesCount || 1
-        );
-        
-        this.moons[index].forEach((moon, moonIndex) => {
-          const moonOrbitRadius = moon.userData.orbitRadius;
-          const moonAngle = elapsedTime * 0.5 + (moonIndex * Math.PI * 2 / this.moons[index].length);
-          const moonX = position.x + moonOrbitRadius * Math.cos(moonAngle);
-          const moonY = position.y + moonOrbitRadius * Math.sin(moonAngle);
-          const moonZ = position.z + moonOrbitRadius * 0.3 * Math.sin(moonAngle * 0.7);
+      // Update PRs position (stationary near planet with small shake)
+      if (this.prs[index]) {
+        this.prs[index].forEach((pr, prIndex) => {
+          // Position near planet, not orbiting
+          const prDistance = planetRadius * 1.3 + prIndex * 0.5; // Close to planet
+          const baseAngle = (prIndex * Math.PI * 2) / this.prs[index].length;
           
-          moon.position.set(moonX, moonY, moonZ);
+          // Small shake movement (agitación)
+          const shakeX = Math.sin(elapsedTime * 2 + prIndex) * 0.1;
+          const shakeY = Math.cos(elapsedTime * 1.5 + prIndex) * 0.1;
+          const shakeZ = Math.sin(elapsedTime * 1.8 + prIndex) * 0.1;
+          
+          // Position around planet but stationary
+          const prX = position.x + prDistance * Math.cos(baseAngle) + shakeX;
+          const prY = position.y + prDistance * Math.sin(baseAngle) + shakeY;
+          const prZ = position.z + shakeZ;
+          
+          pr.position.set(prX, prY, prZ);
+        });
+      }
+      
+      // Update comets position (highly elliptical orbit with fade in/out)
+      if (this.comets[index]) {
+        this.comets[index].forEach((comet) => {
+          const cometData = comet.userData;
+          const cometAngle = elapsedTime * cometData.orbitSpeed;
+          const cometRadius = cometData.orbitRadius * (1 + cometData.eccentricity * Math.cos(cometAngle));
+          
+          const cometX = position.x + cometRadius * Math.cos(cometAngle);
+          const cometY = position.y + cometRadius * Math.sin(cometAngle);
+          const cometZ = position.z + cometRadius * 0.5 * Math.sin(cometAngle * 0.5);
+          
+          comet.position.set(cometX, cometY, cometZ);
+          
+          // Handle fade in/out animation
+          const timeSinceCreation = (Date.now() - cometData.createdAt) / 1000; // seconds
+          
+          // Fade in
+          if (timeSinceCreation < cometData.fadeInTime) {
+            const fadeProgress = timeSinceCreation / cometData.fadeInTime;
+            cometData.opacity = fadeProgress;
+          } else {
+            cometData.opacity = 1.0;
+          }
+          
+          // Check if comet should fade out (commits no longer recent)
+          // This would need to be checked against repo data, but for now we'll keep it visible
+          // In a real implementation, you'd check repo.hasRecentCommits periodically
+          
+          // Apply opacity to materials
+          comet.traverse((child) => {
+            if (child.isMesh && child.material) {
+              const materials = Array.isArray(child.material) ? child.material : [child.material];
+              materials.forEach((mat) => {
+                if (mat.transparent !== undefined && mat.userData?.baseOpacity !== undefined) {
+                  mat.opacity = cometData.opacity * mat.userData.baseOpacity;
+                }
+              });
+            }
+          });
         });
       }
     });

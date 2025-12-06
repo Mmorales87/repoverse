@@ -291,7 +291,10 @@ export class App {
         Logger.log(Logger.PREFIXES.DATA, 'Using mock data');
       } else {
         try {
-          const result = await fetchUserRepositories(username, false);
+          // Use token if available (for development only)
+          // In production, this will be false or token won't be set
+          const useToken = !!import.meta.env.VITE_GITHUB_TOKEN;
+          const result = await fetchUserRepositories(username, useToken);
           repositories = result.repositories;
           rateLimit = result.rateLimit;
 

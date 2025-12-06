@@ -134,32 +134,8 @@ export class HUDManager {
     legendBtn.onmouseout = () => legendBtn.style.background = 'rgba(150, 100, 255, 0.8)';
     legendBtn.onclick = () => this.toggleLegend();
     
-    // Debug toggle button
-    const debugBtn = document.createElement('button');
-    debugBtn.id = 'hud-debug-btn';
-    debugBtn.textContent = 'Debug Lines';
-    debugBtn.style.cssText = `
-      padding: 10px 20px;
-      background: rgba(100, 255, 100, 0.8);
-      border: none;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background 0.2s;
-    `;
-    debugBtn.onmouseover = () => debugBtn.style.background = 'rgba(100, 255, 100, 1)';
-    debugBtn.onmouseout = () => debugBtn.style.background = 'rgba(100, 255, 100, 0.8)';
-    debugBtn.onclick = () => {
-      if (this.sceneManager) {
-        this.sceneManager.toggleDebugMode();
-        debugBtn.textContent = this.sceneManager.debugMode ? 'Debug Lines ON' : 'Debug Lines';
-      }
-    };
-    
     topRight.appendChild(exportBtn);
     topRight.appendChild(legendBtn);
-    topRight.appendChild(debugBtn);
     topRight.appendChild(demoBtn);
     
     // Rate-limit banner
@@ -203,7 +179,6 @@ export class HUDManager {
       exportBtn: exportBtn,
       demoBtn: demoBtn,
       legendBtn: legendBtn,
-      debugBtn: debugBtn,
       rateLimitBanner: rateLimitBanner,
       legendPanel: legendPanel,
       hud: hud
@@ -274,34 +249,24 @@ export class HUDManager {
             <td style="padding: 10px;">Unidad central, punto de interacción</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Commits totales</td>
+            <td style="padding: 10px; font-weight: bold;">Peso del repositorio</td>
             <td style="padding: 10px;">Tamaño / masa</td>
-            <td style="padding: 10px;">Evolución y actividad global</td>
-          </tr>
-          <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Forks</td>
-            <td style="padding: 10px;">Lunas</td>
-            <td style="padding: 10px;">Popularidad / difusión</td>
+            <td style="padding: 10px;">Tamaño del código (KB)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Branches</td>
-            <td style="padding: 10px;">Anillos</td>
-            <td style="padding: 10px;">Complejidad interna</td>
-          </tr>
-          <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Releases</td>
-            <td style="padding: 10px;">Cápsulas orbitando</td>
-            <td style="padding: 10px;">Hitos importantes</td>
+            <td style="padding: 10px;">Lunas / Ramas</td>
+            <td style="padding: 10px;">Ramas del repositorio (main/master más grande y brillante)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">PRs</td>
-            <td style="padding: 10px;">Satélites pequeños</td>
-            <td style="padding: 10px;">Cambios en revisión</td>
+            <td style="padding: 10px;">Cohetes / Naves espaciales</td>
+            <td style="padding: 10px;">Pull Requests en revisión (modelo GLTF 3D)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Issues</td>
-            <td style="padding: 10px;">Tormentas / manchas</td>
-            <td style="padding: 10px;">Problemas pendientes</td>
+            <td style="padding: 10px; font-weight: bold;">Commits recientes</td>
+            <td style="padding: 10px;">Cometas</td>
+            <td style="padding: 10px;">Actividad en últimas 24-48h (aparecen temporalmente)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Watchers</td>
@@ -315,8 +280,8 @@ export class HUDManager {
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Lenguaje principal</td>
-            <td style="padding: 10px;">Color del planeta</td>
-            <td style="padding: 10px;">Diferenciación rápida</td>
+            <td style="padding: 10px;">Color / Matiz del planeta</td>
+            <td style="padding: 10px;">Matiz de color sobre textura del planeta</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Actividad reciente</td>

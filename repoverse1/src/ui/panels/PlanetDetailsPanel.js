@@ -108,8 +108,8 @@ export class PlanetDetailsPanel {
         </div>
         
         <div style="background: rgba(100, 181, 246, 0.1); padding: 10px; border-radius: 5px;">
-          <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Watchers</div>
-          <div style="font-size: 20px; font-weight: bold; color: #64B5F6;">${repo.watchers || 0}</div>
+          <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Branches</div>
+          <div style="font-size: 20px; font-weight: bold; color: #64B5F6;">${repo.branchesCount || 0}</div>
         </div>
         
         <div style="background: rgba(100, 181, 246, 0.1); padding: 10px; border-radius: 5px;">
