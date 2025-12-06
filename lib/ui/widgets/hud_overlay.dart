@@ -19,8 +19,12 @@ class HUDOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Flutter widgets are automatically rendered above HTML canvas
-    // No need for Material elevation - Flutter handles z-index automatically
-    return Stack(
+    // Use Material with high elevation to ensure HUD is above canvas
+    // Stack only contains positioned elements, so empty areas allow events through
+    return Material(
+      type: MaterialType.transparency,
+      elevation: 1000, // Very high elevation to ensure it's above canvas
+      child: Stack(
         clipBehavior: Clip.none, // Allow widgets to overflow if needed
         children: [
         // Top-left: User info and stats
@@ -128,45 +132,40 @@ class HUDOverlay extends StatelessWidget {
             ),
           ),
         ),
-        // Top-right: Share card button - Allow pointer events
+        // Top-right: Share card button
         Positioned(
           top: 16,
           right: 16,
-          child: IgnorePointer(
-            ignoring: false, // This button needs to receive events
-            child: SafeArea(
-              child: ElevatedButton.icon(
-                onPressed: () => _showShareCard(context),
-                icon: const Icon(Icons.share),
-                label: const Text('Share Card'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+          child: SafeArea(
+            child: ElevatedButton.icon(
+              onPressed: () => _showShareCard(context),
+              icon: const Icon(Icons.share),
+              label: const Text('Share Card'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
               ),
             ),
           ),
         ),
-        // Bottom-right: Camera reset button - Allow pointer events
+        // Bottom-right: Camera reset button
         Positioned(
           bottom: 16,
           right: 16,
-          child: IgnorePointer(
-            ignoring: false, // This button needs to receive events
-            child: SafeArea(
-              child: FloatingActionButton(
-                onPressed: onResetCamera,
-                backgroundColor: Colors.indigo,
-                child: const Icon(Icons.refresh),
-              ),
+          child: SafeArea(
+            child: FloatingActionButton(
+              onPressed: onResetCamera,
+              backgroundColor: Colors.indigo,
+              child: const Icon(Icons.refresh),
             ),
           ),
         ),
       ],
+      ),
     );
   }
 

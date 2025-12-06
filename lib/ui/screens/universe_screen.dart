@@ -577,33 +577,30 @@ class _UniverseScreenState extends State<UniverseScreen> {
               ),
             ),
           // HUD Overlay - ALWAYS visible, positioned on top
-          // Use Material with high elevation to ensure it's above canvas
-          // Use IgnorePointer to allow mouse events to pass through to canvas
-          // HUD elements handle their own pointer events internally
-          Positioned.fill(
-            child: Material(
-              type: MaterialType.transparency,
-              elevation: 1000, // Very high elevation
-              child: IgnorePointer(
-                ignoring: true, // Allow mouse events to pass through to canvas for camera controls
-                child: _isInitialized && !_threeJsError
-                    ? HUDOverlay(
-                        stats: widget.stats,
-                        repositories: widget.repositories,
-                        onResetCamera: _resetCamera,
-                      )
-                    : Container(
-                        // Show loading indicator while initializing
-                        color: Colors.black.withOpacity(0.3),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+          // HUD elements are positioned absolutely and only block events where they are
+          // The rest of the screen allows events to pass through to canvas
+          if (_isInitialized && !_threeJsError)
+            HUDOverlay(
+              stats: widget.stats,
+              repositories: widget.repositories,
+              onResetCamera: _resetCamera,
+            )
+          else
+            Positioned.fill(
+              child: Material(
+                type: MaterialType.transparency,
+                elevation: 1000,
+                child: Container(
+                  // Show loading indicator while initializing
+                  color: Colors.black.withOpacity(0.3),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
