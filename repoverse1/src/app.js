@@ -40,6 +40,7 @@ export class App {
     this.ageMapping = 'older-farther';
     this.allRepositories = [];
     this.filterMode = 'active'; // Default: show only active repos
+    this.totalSumStars = 0; // Total stars from all repos (for consistent sun size)
     
     // Managers
     this.repositoryFilterManager = new RepositoryFilterManager();
@@ -364,6 +365,9 @@ export class App {
       // Store enriched repositories for snapshot filtering
       this.allRepositories = enrichedRepositories;
       
+      // Calculate total stars from ALL repos (for consistent sun size across years/filters)
+      this.totalSumStars = enrichedRepositories.reduce((sum, repo) => sum + (repo.stars || 0), 0);
+      
       // Calculate account creation year for year selector
       const accountCreationYear = this.calculateAccountCreationYear(repositories);
       if (this.yearSelector) {
@@ -459,8 +463,9 @@ export class App {
       };
     });
     
-    // Calculate total stars for sun size
-    const sumStars = reposWithSnapshotAge.reduce((sum, repo) => sum + (repo.stars || 0), 0);
+    // Use total stars from ALL repos (not filtered) for consistent sun size
+    // This ensures the sun size remains constant regardless of year or filter mode
+    const sumStars = this.totalSumStars;
     
     // Generate universe with filtered snapshot data
     this.sceneRenderer.generateUniverse(reposWithSnapshotAge, {
