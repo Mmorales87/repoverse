@@ -294,6 +294,7 @@ export class App {
     try {
       let repositories;
       let rateLimit = null;
+      let fetchResult = null;
 
       // Fetch repositories from GitHub
       if (this.useMockData) {
@@ -303,9 +304,18 @@ export class App {
           // Use token if available (for development only)
           // In production, this will be false or token won't be set
           const useToken = !!import.meta.env.VITE_GITHUB_TOKEN;
-          const result = await fetchUserRepositories(username, useToken);
-          repositories = result.repositories;
-          rateLimit = result.rateLimit;
+          
+          // Get current filter mode and year to apply filter BEFORE API requests
+          const currentYear = this.snapshotDate.getFullYear();
+          const currentFilterMode = this.filterMode || 'active';
+          
+          // Pass filter options to fetchUserRepositories so it filters BEFORE detailed requests
+          fetchResult = await fetchUserRepositories(username, useToken, {
+            filterMode: currentFilterMode,
+            year: currentYear
+          });
+          repositories = fetchResult.repositories; // Filtered repos with details
+          rateLimit = fetchResult.rateLimit;
 
           if (isRateLimitExceeded(rateLimit)) {
             this.hudManager?.showRateLimitBanner();
@@ -335,14 +345,24 @@ export class App {
       // Enrich repositories with lastCommitYear (cache once on load)
       const enrichedRepositories = this.repositoryFilterManager.enrichReposWithLastCommitYear(repositories);
       
-      // Calculate stats
+      // Calculate stats from filtered repos
       const stats = this.calculateStats(enrichedRepositories);
       
-      // Store enriched repositories for snapshot filtering
-      this.allRepositories = enrichedRepositories;
+      // For filter switching, we need all repos
+      // If fetchResult has allRepositories, use those; otherwise use filtered repos
+      // (This happens when cache is used - we'll have all repos there)
+      let allReposForFiltering = repositories;
+      if (fetchResult && fetchResult.allRepositories) {
+        allReposForFiltering = fetchResult.allRepositories;
+      }
+      
+      // Store ALL repositories (unfiltered) for filter switching
+      // Enrich all repos too
+      const allReposEnriched = this.repositoryFilterManager.enrichReposWithLastCommitYear(allReposForFiltering);
+      this.allRepositories = allReposEnriched;
       
       // Calculate total stars from ALL repos (for consistent sun size across years/filters)
-      this.totalSumStars = enrichedRepositories.reduce((sum, repo) => sum + (repo.stars || 0), 0);
+      this.totalSumStars = allReposEnriched.reduce((sum, repo) => sum + (repo.stars || 0), 0);
       
       // Calculate account creation year for year selector
       const accountCreationYear = this.calculateAccountCreationYear(repositories);
