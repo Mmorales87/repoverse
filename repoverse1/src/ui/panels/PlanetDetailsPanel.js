@@ -119,21 +119,21 @@ export class PlanetDetailsPanel {
       </div>
       
       <div style="margin-bottom: 20px;">
-        <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Lenguaje Principal</div>
+        <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Principal language</div>
         <div style="font-size: 16px; font-weight: bold;">
-          ${repo.language || 'N/A'}
+          ${repo.language || 'Other'}
         </div>
       </div>
       
       <div style="margin-bottom: 20px;">
-        <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Fecha de Creación</div>
-        <div style="font-size: 14px;">${createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Creation date</div>
+        <div style="font-size: 14px;">${createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
       </div>
       
       ${pushedAt ? `
         <div style="margin-bottom: 20px;">
-          <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Última Actividad</div>
-          <div style="font-size: 14px;">${pushedAt.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">Last activity</div>
+          <div style="font-size: 14px;">${pushedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
         </div>
       ` : ''}
       
