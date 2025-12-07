@@ -192,6 +192,7 @@ function transformRepository(githubRepo, owner = null) {
     branchesCount: 1, // Will be updated with real count
     commitsLast30: Math.floor(estimateCommits(githubRepo) * 0.1), // Estimate recent commits
     watchers: githubRepo.watchers_count || 0,
+    openPRs: 0, // Will be updated with real count
     openIssues: githubRepo.open_issues_count || 0,
     daysSinceCreation: daysSinceCreation,
     hasRecentCommits: hasRecentCommits,
@@ -266,14 +267,36 @@ export async function fetchUserRepositories(username, useToken = false) {
         
         const promises = batch.map(async (repo) => {
           try {
+            // Prepare headers for API calls
+            const apiHeaders = {
+              'Accept': 'application/vnd.github.v3+json'
+            };
+            if (useToken) {
+              const token = import.meta.env.VITE_GITHUB_TOKEN;
+              if (token && token.trim()) {
+                apiHeaders['Authorization'] = `token ${token}`;
+              }
+            }
+            
             // Pass useToken to both functions so they use the token if available
-            const [commitCount, branchCount] = await Promise.all([
+            const [commitCount, branchCount, issuesResponse] = await Promise.all([
               fetchRealCommitCount(repo.owner || username, repo.name, useToken),
-              fetchRealBranchCount(repo.owner || username, repo.name, useToken)
+              fetchRealBranchCount(repo.owner || username, repo.name, useToken),
+              fetch(`${GITHUB_API_BASE}/repos/${repo.owner || username}/${repo.name}/issues?state=open&per_page=100`, { headers: apiHeaders })
             ]);
             
             repo.totalCommits = commitCount;
             repo.branchesCount = branchCount;
+            
+            // Separate PRs from Issues
+            if (issuesResponse.ok) {
+              const issuesData = await issuesResponse.json();
+              // PRs have 'pull_request' field, real issues don't
+              const prs = issuesData.filter(item => item.pull_request);
+              const realIssues = issuesData.filter(item => !item.pull_request);
+              repo.openPRs = prs.length;
+              repo.openIssues = realIssues.length;
+            }
           } catch (error) {
             console.warn(`[GITHUB] Error fetching details for ${repo.name}:`, error);
             // Keep estimated values on error

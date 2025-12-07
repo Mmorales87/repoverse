@@ -424,6 +424,7 @@ export class SceneManager {
       
       // Update PRs position (stationary near planet with small shake)
       if (this.prs[index]) {
+        const planetRadius = planet.children[0]?.userData?.radius || 1;
         this.prs[index].forEach((pr, prIndex) => {
           // Position near planet, not orbiting
           const prDistance = planetRadius * 1.3 + prIndex * 0.5; // Close to planet
