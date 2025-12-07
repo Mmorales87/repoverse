@@ -118,20 +118,50 @@ export class ShareCard {
     canvas.height = height;
     const ctx = canvas.getContext('2d');
 
-    // Modern dark gradient background
-    const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-    bgGradient.addColorStop(0, '#0f0c29');
-    bgGradient.addColorStop(0.5, '#302b63');
-    bgGradient.addColorStop(1, '#24243e');
+    // Galactic radial gradient background with depth
+    const centerX = width * 0.3;
+    const centerY = height * 0.2;
+    const maxRadius = Math.sqrt(width * width + height * height);
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+    bgGradient.addColorStop(0, '#2a1b63');
+    bgGradient.addColorStop(0.7, '#0d0f24');
+    bgGradient.addColorStop(1, '#0a0a15');
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Add subtle pattern overlay
-    ctx.fillStyle = 'rgba(100, 181, 246, 0.03)';
+    // Enhanced stardust effect with multiple layers
+    // Layer 1: Large particles (3-5px) with higher opacity
+    ctx.fillStyle = 'rgba(100, 181, 246, 0.15)';
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const radius = Math.random() * 2 + 3;
+      const particleGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      particleGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      particleGradient.addColorStop(1, 'rgba(100, 181, 246, 0)');
+      ctx.fillStyle = particleGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Layer 2: Medium particles (1-3px) with medium opacity
+    ctx.fillStyle = 'rgba(100, 181, 246, 0.08)';
     for (let i = 0; i < 50; i++) {
       const x = Math.random() * width;
       const y = Math.random() * height;
-      const radius = Math.random() * 3 + 1;
+      const radius = Math.random() * 2 + 1;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Layer 3: Small particles (0.5-1px) with low opacity for subtle noise
+    ctx.fillStyle = 'rgba(150, 200, 255, 0.04)';
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const radius = Math.random() * 0.5 + 0.5;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
@@ -145,26 +175,47 @@ export class ShareCard {
     ctx.fillStyle = accentGradient;
     ctx.fillRect(0, 0, width, 5);
     
-    // Username - Large and bold
+    // Username - Large and bold with text shadow glow
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(`@${username}`, width / 2, 40);
     
-    // Year badge
+    // Year badge with text shadow glow
     const yearText = `${year}`;
     ctx.font = 'bold 42px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.fillText(yearText, width / 2, 110);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     
-    // Decorative line under year
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    // Elegant separator with gradient glow
+    const separatorWidth = 80;
+    const separatorY = 160;
+    const separatorGradient = ctx.createLinearGradient(
+      width / 2 - separatorWidth / 2, separatorY,
+      width / 2 + separatorWidth / 2, separatorY
+    );
+    separatorGradient.addColorStop(0, 'transparent');
+    separatorGradient.addColorStop(0.5, '#9b6dff');
+    separatorGradient.addColorStop(1, 'transparent');
+    ctx.strokeStyle = separatorGradient;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(155, 109, 255, 0.5)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     ctx.beginPath();
-    ctx.moveTo(width / 2 - 60, 160);
-    ctx.lineTo(width / 2 + 60, 160);
+    ctx.moveTo(width / 2 - separatorWidth / 2, separatorY);
+    ctx.lineTo(width / 2 + separatorWidth / 2, separatorY);
     ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
 
     // Dynamic text based on filter mode
     const filterText = filterMode === 'active' 
@@ -187,7 +238,7 @@ export class ShareCard {
       { label: 'Public repositories', value: stats.totalRepos, icon: '🪐' },
 { label: 'Commits', value: stats.totalCommits.toLocaleString(), icon: '☄️' },
 { label: 'Stars', value: stats.totalStars.toLocaleString(), icon: '⭐' },
-{ label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '�' },
+{ label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '🔱' },
 { label: 'Branches', value: stats.totalBranches, icon: '🌙' },
 { label: 'New repositories', value: stats.reposCreatedThisYear, icon: '➕'},
 
@@ -209,8 +260,21 @@ export class ShareCard {
       this.drawRoundedRect(ctx, x, y, cardWidth, cardHeight, cardRadius);
       ctx.fill();
       
-      // Card border with rounded corners
-      ctx.strokeStyle = 'rgba(100, 181, 246, 0.4)';
+      // Card border with glow effect (multiple layers for depth)
+      // Outer glow shadow
+      ctx.shadowColor = 'rgba(150, 100, 255, 0.15)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = 'rgba(150, 100, 255, 0.35)';
+      ctx.lineWidth = 1;
+      this.drawRoundedRect(ctx, x, y, cardWidth, cardHeight, cardRadius);
+      ctx.stroke();
+      
+      // Inner border
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(150, 100, 255, 0.4)';
       ctx.lineWidth = 1.5;
       this.drawRoundedRect(ctx, x, y, cardWidth, cardHeight, cardRadius);
       ctx.stroke();
@@ -276,8 +340,21 @@ export class ShareCard {
         this.drawRoundedRect(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, badgeRadius);
         ctx.fill();
         
-        // Badge border
-        ctx.strokeStyle = 'rgba(100, 181, 246, 0.4)';
+        // Badge border with glow effect (consistent with main cards)
+        // Outer glow shadow
+        ctx.shadowColor = 'rgba(150, 100, 255, 0.15)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.35)';
+        ctx.lineWidth = 1;
+        this.drawRoundedRect(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, badgeRadius);
+        ctx.stroke();
+        
+        // Inner border
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.4)';
         ctx.lineWidth = 1.5;
         this.drawRoundedRect(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, badgeRadius);
         ctx.stroke();
