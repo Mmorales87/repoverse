@@ -55,7 +55,7 @@ export class HomeScreen {
     `;
     
     const subtitle = document.createElement('p');
-    subtitle.textContent = 'Visualice your GitHub repositories as a 3D universe';
+    subtitle.textContent = 'Explore your GitHub repositories in a 3D universe.';
     subtitle.style.cssText = `
       font-size: 18px;
       opacity: 0.7;
@@ -88,8 +88,8 @@ export class HomeScreen {
     const input = document.createElement('input');
     input.type = 'text';
     input.id = 'home-username-input';
-    input.placeholder = 'mmorales87';
-    input.value = 'mmorales87';
+    input.placeholder = 'Enter your GitHub username';
+    input.value = '';
     input.style.cssText = `
       padding: 12px 16px;
       background: rgba(255, 255, 255, 0.1);
@@ -129,7 +129,11 @@ export class HomeScreen {
       generateBtn.style.boxShadow = 'none';
     };
     generateBtn.onclick = () => {
-      const username = input.value.trim() || 'mmorales87';
+      const username = input.value.trim();
+      if (!username) {
+        this.showError('Please enter a GitHub username');
+        return;
+      }
       this.showLoading();
       if (this.onGenerate) {
         this.onGenerate(username);
