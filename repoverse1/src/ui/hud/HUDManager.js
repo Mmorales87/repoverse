@@ -447,6 +447,86 @@ export class HUDManager {
           });
         }
         
+        // Draw user information overlay on canvas
+        if (this.app) {
+          try {
+            // Get user data
+            const username = this.app.currentUsername || 'user';
+            const selectedYear = this.app.snapshotDate 
+              ? this.app.snapshotDate.getFullYear() 
+              : (this.yearSelector ? this.yearSelector.currentYear : new Date().getFullYear());
+            
+            // Get filtered repositories for the current year (same filter as visualization)
+            let filteredRepos = [];
+            if (this.app.allRepositories && this.app.repositoryFilterManager) {
+              const filterMode = this.app.filterMode || 'all';
+              filteredRepos = this.app.repositoryFilterManager.filterRepositories(
+                this.app.allRepositories,
+                selectedYear,
+                filterMode
+              );
+            }
+            
+            // Calculate statistics
+            const totalRepos = filteredRepos.length;
+            const totalCommits = filteredRepos.reduce((sum, repo) => sum + (repo.totalCommits || 0), 0);
+            
+            // Draw text overlay at the bottom center
+            const padding = 30;
+            const textY = height - padding;
+            const fontSize = 24;
+            const lineHeight = 32;
+            
+            // Set text style
+            ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            
+            // Draw semi-transparent background for better readability
+            const textLines = [
+              `@${username}`,
+              `${totalRepos} repos • ${totalCommits.toLocaleString()} commits • ${selectedYear}`
+            ];
+            const textWidth = Math.max(
+              ...textLines.map(line => ctx.measureText(line).width)
+            );
+            const bgPadding = 20;
+            const bgX = (width - textWidth) / 2 - bgPadding;
+            const bgY = textY - (textLines.length * lineHeight) - bgPadding;
+            const bgWidth = textWidth + (bgPadding * 2);
+            const bgHeight = (textLines.length * lineHeight) + (bgPadding * 2);
+            
+            // Draw background with rounded corners effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+            
+            // Draw text with shadow for better visibility
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 2;
+            
+            // Draw username (larger, more prominent)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${fontSize + 4}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+            ctx.fillText(textLines[0], width / 2, textY - lineHeight);
+            
+            // Draw stats (slightly smaller)
+            ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillText(textLines[1], width / 2, textY);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+          } catch (error) {
+            console.warn('[HUD] Error drawing user info overlay:', error);
+            // Continue with export even if overlay fails
+          }
+        }
+        
         // Get composite data
         const dataURL = compositeCanvas.toDataURL('image/png');
         

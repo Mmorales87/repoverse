@@ -69,7 +69,7 @@ export class ShareCard {
     // Languages distribution
     const languages = {};
     repositories.forEach(repo => {
-      const lang = repo.language || 'Unknown';
+      const lang = repo.language || 'Other';
       languages[lang] = (languages[lang] || 0) + 1;
     });
     const topLanguages = Object.entries(languages)
@@ -152,12 +152,13 @@ export class ShareCard {
     const startX = (width - (3 * cardWidth + 2 * cardSpacing)) / 2;
     
     const statsData = [
-      { label: 'Repositorios', value: stats.totalRepos, icon: '📦' },
-      { label: 'Commits', value: stats.totalCommits.toLocaleString(), icon: '💾' },
-      { label: 'Stars', value: stats.totalStars.toLocaleString(), icon: '⭐' },
-      { label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '🍴' },
-      { label: 'Branches', value: stats.totalBranches, icon: '🌿' },
-      { label: 'Nuevos', value: stats.reposCreatedThisYear, icon: '✨' }
+      { label: 'Repositorios', value: stats.totalRepos, icon: '🪐' },
+{ label: 'Commits', value: stats.totalCommits.toLocaleString(), icon: '☄️' },
+{ label: 'Stars', value: stats.totalStars.toLocaleString(), icon: '⭐' },
+{ label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '🛠️' },
+{ label: 'Branches', value: stats.totalBranches, icon: '🌙' },
+{ label: 'Nuevos', value: stats.reposCreatedThisYear, icon: '➕'},
+
     ];
 
     // Draw stat cards
@@ -204,7 +205,7 @@ export class ShareCard {
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Lenguajes principales', width / 2, langY);
+      ctx.fillText('Principal languages', width / 2, langY);
       
       // Language badges
       const langSpacing = 120;
