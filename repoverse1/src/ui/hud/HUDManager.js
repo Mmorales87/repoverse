@@ -23,7 +23,6 @@ export class HUDManager {
     this.galaxy = galaxy;
     this.yearSelector = yearSelector;
     this.app = app; // Store app reference for ShareCard
-    this.currentStats = null; // Store current stats for export
     
     this.createHUD();
     this.initialized = true;
@@ -359,10 +358,6 @@ export class HUDManager {
       const totalCommits = stats.totalCommits || 0;
       this.elements.stats.textContent = `${totalRepos} repos • ${totalCommits.toLocaleString()} commits`;
     }
-    
-    // Store stats for export
-    this.currentStats = stats;
-    this.currentUsername = username;
   }
 
   /**
@@ -418,18 +413,18 @@ export class HUDManager {
       
       requestAnimationFrame(() => {
         // Create composite canvas using current viewport size
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const compositeCanvas = document.createElement('canvas');
-    compositeCanvas.width = width;
-    compositeCanvas.height = height;
-    const ctx = compositeCanvas.getContext('2d');
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const compositeCanvas = document.createElement('canvas');
+        compositeCanvas.width = width;
+        compositeCanvas.height = height;
+        const ctx = compositeCanvas.getContext('2d');
         
         // Fill with black background first
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, width, height);
-    
-    // Draw Galaxy background first
+        
+        // Draw Galaxy background first
         if (this.galaxy && this.galaxy.canvas && this.galaxy.canvas.width > 0) {
           try {
             ctx.drawImage(this.galaxy.canvas, 0, 0, width, height);
@@ -463,123 +458,34 @@ export class HUDManager {
           });
         }
         
-        // Add overlay with user info and stats
-        this.addExportOverlay(ctx, width, height);
-    
-    // Get composite data
-    const dataURL = compositeCanvas.toDataURL('image/png');
-    
+        // Get composite data
+        const dataURL = compositeCanvas.toDataURL('image/png');
+        
         // Verify we have actual data
         if (dataURL && dataURL.length > 100) { // PNG data URLs are much longer than "data:,"
-    // Create download link
-    const link = document.createElement('a');
-    const username = this.elements.username ? this.elements.username.textContent.replace('@', '') : 'user';
-    const date = new Date().toISOString().split('T')[0];
-    link.download = `repoverse-${username}-${date}.png`;
-    link.href = dataURL;
+          // Create download link
+          const link = document.createElement('a');
+          const username = this.elements.username ? this.elements.username.textContent.replace('@', '') : 'user';
+          const date = new Date().toISOString().split('T')[0];
+          link.download = `repoverse-${username}-${date}.png`;
+          link.href = dataURL;
           document.body.appendChild(link);
-    link.click();
+          link.click();
           setTimeout(() => document.body.removeChild(link), 100);
         } else {
           console.error('[HUD] Failed to generate PNG data - dataURL too short:', dataURL?.substring(0, 50));
           alert('Error al generar la imagen. El canvas puede estar vacío. Por favor, inténtalo de nuevo.');
         }
-    
+        
         // Restore HUD and year selector immediately
-    if (this.elements.hud && hudVisible) {
-      this.elements.hud.style.display = 'block';
-    }
-    if (yearSelector && yearSelectorVisible) {
-      yearSelector.style.display = 'block';
-    }
+        if (this.elements.hud && hudVisible) {
+          this.elements.hud.style.display = 'block';
+        }
+        if (yearSelector && yearSelectorVisible) {
+          yearSelector.style.display = 'block';
+        }
       });
     });
-  }
-
-  /**
-   * Add overlay with user info and stats to export image
-   */
-  addExportOverlay(ctx, width, height) {
-    const username = this.currentUsername || (this.elements.username ? this.elements.username.textContent.replace('@', '') : 'user');
-    const stats = this.currentStats || { totalRepos: 0, totalCommits: 0, totalStars: 0 };
-    const year = this.app?.snapshotDate ? this.app.snapshotDate.getFullYear() : new Date().getFullYear();
-    
-    // Bottom overlay with gradient
-    const overlayHeight = 140;
-    const overlayY = height - overlayHeight;
-    const gradient = ctx.createLinearGradient(0, overlayY, 0, height);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.7)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, overlayY, width, overlayHeight);
-    
-    // Top overlay for username
-    const topOverlayHeight = 100;
-    const topGradient = ctx.createLinearGradient(0, 0, 0, topOverlayHeight);
-    topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
-    topGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.7)');
-    topGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = topGradient;
-    ctx.fillRect(0, 0, width, topOverlayHeight);
-    
-    // Username at top
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`@${username}`, width / 2, 25);
-    
-    // Year badge
-    ctx.fillStyle = '#64b5f6';
-    ctx.font = '24px "Segoe UI", Arial, sans-serif';
-    ctx.fillText(`${year}`, width / 2, 60);
-    
-    // Stats at bottom - left side
-    const leftX = 40;
-    const bottomY = height - 30;
-    const statSpacing = 120;
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'bottom';
-    
-    // Repos
-    ctx.fillText('Repositorios', leftX, bottomY - 60);
-    ctx.fillStyle = '#64b5f6';
-    ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-    ctx.fillText((stats.totalRepos || 0).toString(), leftX, bottomY - 30);
-    
-    // Commits
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('Commits', leftX + statSpacing, bottomY - 60);
-    ctx.fillStyle = '#64b5f6';
-    ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-    ctx.fillText((stats.totalCommits || 0).toLocaleString(), leftX + statSpacing, bottomY - 30);
-    
-    // Stars
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('Stars', leftX + statSpacing * 2, bottomY - 60);
-    ctx.fillStyle = '#64b5f6';
-    ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-    ctx.fillText((stats.totalStars || 0).toLocaleString(), leftX + statSpacing * 2, bottomY - 30);
-    
-    // Right side - RepoVerse branding
-    ctx.fillStyle = 'rgba(176, 190, 197, 0.6)';
-    ctx.font = '16px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('RepoVerse', width - 40, bottomY - 30);
-    
-    // Decorative accent line at bottom
-    ctx.strokeStyle = '#64b5f6';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(leftX, bottomY - 5);
-    ctx.lineTo(leftX + statSpacing * 2.5, bottomY - 5);
-    ctx.stroke();
   }
 
   /**

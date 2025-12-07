@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "lottie-web": "^5.13.0",
+    "ogl": "^1.0.11",
     "three": "^0.160.0"
   },
   "devDependencies": {

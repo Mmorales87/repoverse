@@ -68,7 +68,7 @@ export class SceneManager {
       // Scene
       console.log('[SCENE] Creating scene...');
       this.scene = new THREE.Scene();
-      this.scene.background = new THREE.Color(0x000000);
+      this.scene.background = new THREE.Color(0x0E0E0E);
       console.log('[SCENE] ✅ Scene created');
     
     // Camera
