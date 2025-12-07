@@ -68,7 +68,8 @@ export class SceneManager {
       // Scene
       console.log('[SCENE] Creating scene...');
       this.scene = new THREE.Scene();
-      this.scene.background = new THREE.Color(0x0E0E0E);
+      // NO poner background - el skybox será el fondo
+      this.scene.background = null;
       console.log('[SCENE] ✅ Scene created');
     
     // Camera
@@ -82,7 +83,7 @@ export class SceneManager {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
-      alpha: true
+      alpha: false // Cambiar a false para que el skybox sea visible
     });
     this.renderer.setSize(this.canvas.width, this.canvas.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -95,6 +96,9 @@ export class SceneManager {
     this.controls.maxDistance = 500;
     this.controls.enablePan = true;
     this.controls.autoRotate = false;
+    
+    // Create skybox (3D sphere)
+    this.createSkybox();
     
     // Handle resize
     window.addEventListener('resize', () => this.handleResize());
@@ -643,6 +647,63 @@ export class SceneManager {
     }
     
     window.removeEventListener('resize', () => this.handleResize());
+  }
+
+  /**
+   * Create skybox with milky way texture (3D sphere like Blender environment)
+   */
+  createSkybox() {
+    console.log('[SCENE] Loading skybox texture...');
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      '/textures/2k_stars.jpg',
+      (texture) => {
+        console.log('[SCENE] ✅ Texture loaded successfully');
+        
+        // Hide GalaxyRenderer canvas so skybox is visible
+        const galaxyCanvas = document.getElementById('galaxy-canvas');
+        if (galaxyCanvas) {
+          galaxyCanvas.style.display = 'none';
+          console.log('[SCENE] ✅ GalaxyRenderer canvas hidden');
+        }
+        
+        // Set scene.background so it's always visible
+        this.scene.background = texture;
+        console.log('[SCENE] ✅ Scene background set to texture (static background)');
+        
+        // ALSO create 3D sphere skybox for parallax effect when rotating camera
+        // This will overlay the static background with 3D effect
+        const skyboxGeometry = new THREE.SphereGeometry(1800, 64, 64);
+        const skyboxMaterial = new THREE.MeshBasicMaterial({
+          map: texture.clone(),
+          side: THREE.BackSide,
+          fog: false,
+          depthWrite: false,
+          transparent: false
+        });
+        
+        const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
+        // Render skybox first (before everything else)
+        skybox.renderOrder = -Infinity;
+        skybox.receiveShadow = false;
+        skybox.castShadow = false;
+        
+        this.scene.add(skybox);
+        this.skybox = skybox;
+        console.log('[SCENE] ✅ Skybox 3D mesh added - parallax effect when rotating camera');
+        
+        // Force render
+        if (this.renderer && this.camera) {
+          this.renderer.render(this.scene, this.camera);
+        }
+      },
+      (progress) => {
+        console.log('[SCENE] Skybox texture loading progress:', progress);
+      },
+      (error) => {
+        console.error('[SCENE] ❌ Could not load skybox texture:', error);
+      }
+    );
   }
 }
 
