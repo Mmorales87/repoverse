@@ -219,7 +219,7 @@ export class HUDManager {
     panel.id = 'hud-legend-panel';
     panel.style.cssText = `
       position: fixed;
-      top: 50%;
+      top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
       width: 600px;
@@ -229,6 +229,7 @@ export class HUDManager {
       border: 2px solid rgba(150, 100, 255, 0.5);
       border-radius: 10px;
       padding: 20px;
+      padding-bottom: 40px;
       z-index: 2001;
       pointer-events: auto;
       overflow-y: auto;
@@ -258,50 +259,50 @@ export class HUDManager {
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr style="border-bottom: 2px solid rgba(150, 100, 255, 0.5);">
-            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Elemento</th>
-            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Representa</th>
-            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Función visual</th>
+            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Element</th>
+            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Representation</th>
+            <th style="text-align: left; padding: 10px; font-size: 14px; color: #9664FF;">Visual function</th>
           </tr>
         </thead>
         <tbody>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Sun</td>
-            <td style="padding: 10px;">User / organization</td>
+            <td style="padding: 10px; font-weight: bold;">User / organization</td>
+            <td style="padding: 10px;">Sun ☀️</td>
             <td style="padding: 10px;">Central point of the system, global influence, brightness/halo; can emit particles or energy pulse</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Repository</td>
-            <td style="padding: 10px;">Planet</td>
+            <td style="padding: 10px;">Planet 🌍</td>
             <td style="padding: 10px;">Central unit, interaction point</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Repository weight</td>
-            <td style="padding: 10px;">Size / mass</td>
+            <td style="padding: 10px;">Planet size 📏</td>
             <td style="padding: 10px;">Code size (KB)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Branches</td>
-            <td style="padding: 10px;">Moons / Branches</td>
+            <td style="padding: 10px;">Moons 🌑</td>
             <td style="padding: 10px;">Branches of the repository (main/master largest and brightest)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">PRs</td>
-            <td style="padding: 10px;">Rockets / Spacecraft</td>
+            <td style="padding: 10px;">Rockets 🚀</td>
             <td style="padding: 10px;">Pull Requests in review</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Commits recientes</td>
-            <td style="padding: 10px;">Comets</td>
+            <td style="padding: 10px;">Comets ☄️</td>
             <td style="padding: 10px;">Activity in last 24-48h (appear temporarily)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Main language</td>
-            <td style="padding: 10px;">Color / Planet tint</td>
+            <td style="padding: 10px;">Planet 🌍 with language color 🎨</td>
             <td style="padding: 10px;">Color tint over planet texture</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Recent activity</td>
-            <td style="padding: 10px;">Orbital speed</td>
+            <td style="padding: 10px;">Orbital speed ➰</td>
             <td style="padding: 10px;">Repositories with most commits in last 30 days orbit faster around the sun</td>
           </tr>
           <tr>

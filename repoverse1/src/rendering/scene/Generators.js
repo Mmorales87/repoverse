@@ -41,7 +41,7 @@ const LANGUAGE_COLORS = {
   'GLSL': 0x5686A5,
   'JSON': 0x292929,
   'TOML': 0x9C6A5E,
-  'Default': 0x888888
+  'Default': 0x4a5f35
 };
 
 /**
@@ -420,7 +420,7 @@ export function generateBranches(repo, planetRadius) {
     } else {
       branchColor = 0xAAAAAA; // Grey
       emissiveIntensity = 0.2;
-      opacity = 0.6; // More muted/appagada
+      opacity = 1.0; // More muted/appagada
     }
     
     const material = new THREE.MeshStandardMaterial({
@@ -466,7 +466,7 @@ export function generatePRs(repo, planetRadius, numBranches) {
   const prOrbitRadius = lastBranchOrbitRadius + prBaseGap;
   
   const loader = new GLTFLoader();
-  const prSize = 0.15;
+  const prSize = 1.5;
   
   // Load model once and clone for each PR
   let modelCache = null;
@@ -477,7 +477,7 @@ export function generatePRs(repo, planetRadius, numBranches) {
     
     loadPromise = new Promise((resolve, reject) => {
       loader.load(
-        '/models/PR-Spaceship.glb',
+        '/models/PR-Rocket.glb',
         (gltf) => {
           modelCache = gltf.scene;
           resolve(gltf);
@@ -496,9 +496,7 @@ export function generatePRs(repo, planetRadius, numBranches) {
   // Create PRs with async model loading
   for (let i = 0; i < prCount; i++) {
     const prState = repo.prStates && repo.prStates[i] ? repo.prStates[i] : 'open';
-    let prColor = 0xFFA500; // Orange for open
-    if (prState === 'merged') prColor = 0x00FF00; // Green
-    if (prState === 'closed') prColor = 0x888888; // Grey
+    /* let prColor = 0xFFA500; // Orange for open */
     
     // Create PR object (will be updated when model loads)
     const prGroup = new THREE.Group();
@@ -506,9 +504,9 @@ export function generatePRs(repo, planetRadius, numBranches) {
     // Fallback geometry if model fails
     const fallbackGeometry = new THREE.SphereGeometry(prSize, 8, 8);
     const fallbackMaterial = new THREE.MeshStandardMaterial({
-      color: prColor,
-      emissive: prColor,
-      emissiveIntensity: 0.3
+      /* color: prColor,
+      emissive: prColor, */
+      emissiveIntensity: 0.8
     });
     const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
     prGroup.add(fallbackMesh);
@@ -524,20 +522,19 @@ export function generatePRs(repo, planetRadius, numBranches) {
         // Clone model
         const prModel = modelCache.clone();
         
-        // Apply color to all materials in the model
+        // Preserve original colors and textures, but add emission for visibility (like decorative rocket)
         prModel.traverse((child) => {
-          if (child.isMesh) {
-            if (child.material) {
-              // Handle both single material and array of materials
-              const materials = Array.isArray(child.material) ? child.material : [child.material];
-              materials.forEach((mat) => {
-                if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
-                  mat.color.setHex(prColor);
-                  mat.emissive.setHex(prColor);
-                  mat.emissiveIntensity = 0.3;
-                }
-              });
-            }
+          if (child.isMesh && child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach((mat) => {
+              // Preserve original color but add emission for visibility
+              if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
+                const originalColor = mat.color ? mat.color.getHex() : 0xFFFFFF;
+                mat.color.setHex(originalColor);
+                mat.emissive.setHex(originalColor);
+                mat.emissiveIntensity = 0.5; // Make it glow so it's visible
+              }
+            });
           }
         });
         
@@ -581,11 +578,11 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
   const cometGroup = new THREE.Group();
   
   const loader = new GLTFLoader();
-  const cometSize = 1.2; // Size of the rocket
+  const cometSize = 2.9; // Size of the rocket
   
   // Load rocket model
   loader.load(
-    '/models/Rocket-Across.glb',
+    '/models/comets.glb',
     (gltf) => {
       const rocketModel = gltf.scene;
       

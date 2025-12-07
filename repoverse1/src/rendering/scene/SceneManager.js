@@ -435,12 +435,17 @@ export class SceneManager {
           const shakeY = Math.cos(elapsedTime * 1.5 + prIndex) * 0.1;
           const shakeZ = Math.sin(elapsedTime * 1.8 + prIndex) * 0.1;
           
-          // Position around planet but stationary
+          // Position around planet but stationary, elevated above moons
           const prX = position.x + prDistance * Math.cos(baseAngle) + shakeX;
-          const prY = position.y + prDistance * Math.sin(baseAngle) + shakeY;
+          const prY = position.y + 2.5 + prDistance * Math.sin(baseAngle) + shakeY; // +2.5 para mover arriba
           const prZ = position.z + shakeZ;
           
           pr.position.set(prX, prY, prZ);
+          
+          // Rotate to face planet - si el modelo está en vertical, rotar 90° en X primero
+          pr.lookAt(position);
+          // Si el modelo originalmente apunta hacia arriba (vertical), rotar para que apunte hacia el planeta
+          pr.rotateX(-Math.PI / -2); // Rotar 90° en X para que el frente apunte hacia el planeta
         });
       }
       
