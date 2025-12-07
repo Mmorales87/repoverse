@@ -49,7 +49,7 @@ export class FilterToggleUI {
     // Create label
     const label = document.createElement('label');
     label.htmlFor = 'filter-toggle-checkbox';
-    label.textContent = 'Mostrar solo repos activos este año';
+    label.textContent = 'Show only active repositories this year';
     label.style.cssText = `
       color: white;
       font-size: 14px;
