@@ -324,7 +324,7 @@ export function generatePlanet(repo, index) {
   const material = new THREE.MeshStandardMaterial({
     color: color, // Language color as base (will be multiplied with texture)
     emissive: color, // Language color as subtle emissive tint
-    emissiveIntensity: 0.2, // Subtle emissive glow
+    emissiveIntensity: 1.4, // Subtle emissive glow
     transparent: false, // Not transparent
     opacity: 1.0 // Fully opaque
   });
