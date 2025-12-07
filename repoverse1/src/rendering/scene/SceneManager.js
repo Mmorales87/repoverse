@@ -62,15 +62,11 @@ export class SceneManager {
    * Initialize Three.js scene
    */
   initialize() {
-    console.log('[SCENE] Starting Three.js initialization...');
-    
     try {
       // Scene
-      console.log('[SCENE] Creating scene...');
       this.scene = new THREE.Scene();
       // NO poner background - el skybox será el fondo
       this.scene.background = null;
-      console.log('[SCENE] ✅ Scene created');
     
     // Camera
     const aspect = this.canvas.width / this.canvas.height;
@@ -104,7 +100,6 @@ export class SceneManager {
     window.addEventListener('resize', () => this.handleResize());
     
     this.initialized = true;
-    console.log('[SCENE] ✅ Three.js initialization complete');
     } catch (error) {
       console.error('[SCENE] ❌ Error during initialization:', error);
       console.error('[SCENE] Stack:', error.stack);
@@ -256,7 +251,6 @@ export class SceneManager {
       // to avoid being affected by LensPass distortion
       const orbitLine = generateOrbitLine(orbitalRadius, eccentricity, inclination);
       this.orbitLines.push(orbitLine);
-      console.log(`[SCENE] Orbit line ${index} created, radius: ${orbitalRadius}, total lines: ${this.orbitLines.length}`);
       // Don't add to scene - EffectsManager will handle rendering them separately
     });
     
@@ -355,7 +349,6 @@ export class SceneManager {
   start() {
     // Animation loop is managed by app.js
     // This method is kept for compatibility but doesn't start its own loop
-    console.log('SceneManager ready for animation');
   }
 
   /**
@@ -653,23 +646,18 @@ export class SceneManager {
    * Create skybox with milky way texture (3D sphere like Blender environment)
    */
   createSkybox() {
-    console.log('[SCENE] Loading skybox texture...');
     const loader = new THREE.TextureLoader();
     loader.load(
       '/textures/2k_stars.jpg',
       (texture) => {
-        console.log('[SCENE] ✅ Texture loaded successfully');
-        
         // Hide GalaxyRenderer canvas so skybox is visible
         const galaxyCanvas = document.getElementById('galaxy-canvas');
         if (galaxyCanvas) {
           galaxyCanvas.style.display = 'none';
-          console.log('[SCENE] ✅ GalaxyRenderer canvas hidden');
         }
         
         // Set scene.background so it's always visible
         this.scene.background = texture;
-        console.log('[SCENE] ✅ Scene background set to texture (static background)');
         
         // ALSO create 3D sphere skybox for parallax effect when rotating camera
         // This will overlay the static background with 3D effect
@@ -690,16 +678,13 @@ export class SceneManager {
         
         this.scene.add(skybox);
         this.skybox = skybox;
-        console.log('[SCENE] ✅ Skybox 3D mesh added - parallax effect when rotating camera');
         
         // Force render
         if (this.renderer && this.camera) {
           this.renderer.render(this.scene, this.camera);
         }
       },
-      (progress) => {
-        console.log('[SCENE] Skybox texture loading progress:', progress);
-      },
+      undefined,
       (error) => {
         console.error('[SCENE] ❌ Could not load skybox texture:', error);
       }

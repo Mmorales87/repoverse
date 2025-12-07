@@ -5,22 +5,12 @@ import { App } from './app.js';
  */
 async function main() {
   try {
-    console.log('[MAIN] Starting RepoVerse.js initialization...');
-    
     // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) loadingIndicator.remove();
     
-    console.log('[MAIN] Creating App.js instance...');
     const app = new App();
-    
-    console.log('[MAIN] Calling app.initialize()...');
     await app.initialize();
-    
-    // Store app instance globally for debugging
-    window.repoverseApp = app;
-    
-    console.log('[MAIN] ✅ RepoVerse.js initialized successfully');
   } catch (error) {
     // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');

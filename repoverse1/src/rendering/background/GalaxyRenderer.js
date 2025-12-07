@@ -42,11 +42,8 @@ export class GalaxyRenderer {
    * Implements IBackground.initialize()
    */
   async initialize() {
-    console.log('[GALAXY] Starting initialization...');
-    
     try {
       // Create canvas
-      console.log('[GALAXY] Creating canvas element...');
       this.canvas = document.createElement('canvas');
       this.canvas.id = 'galaxy-canvas';
       this.canvas.style.cssText = `
@@ -60,39 +57,31 @@ export class GalaxyRenderer {
       `;
       
       this.container.appendChild(this.canvas);
-      console.log('[GALAXY] ✅ Canvas created and appended');
       
       // Set canvas size
       this._resizeCanvas();
       window.addEventListener('resize', () => this._resizeCanvas());
-      console.log(`[GALAXY] Canvas size: ${this.canvas.width}x${this.canvas.height}`);
       
       // Get WebGL context
-      console.log('[GALAXY] Getting WebGL context...');
       this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
       if (!this.gl) {
         console.error('[GALAXY] ❌ WebGL not supported');
         return;
       }
-      console.log('[GALAXY] ✅ WebGL context obtained');
       
       // Setup mouse tracking
       this.setupMouseTracking();
       
       // Create shader program
-      console.log('[GALAXY] Creating shader program...');
       this.createShaderProgram();
       
       if (!this.program) {
         console.error('[GALAXY] ❌ Shader program creation failed');
         throw new Error('Galaxy shader compilation failed');
       }
-      console.log('[GALAXY] ✅ Shader program created');
       
       // Start animation
-      console.log('[GALAXY] Starting animation loop...');
       this.animate();
-      console.log('[GALAXY] ✅ Initialization complete');
     } catch (error) {
       console.error('[GALAXY] ❌ Error during initialization:', error);
       console.error('[GALAXY] Stack:', error.stack);
@@ -295,25 +284,20 @@ export class GalaxyRenderer {
     `;
     
     // Compile shaders
-    console.log('[GALAXY] Compiling vertex shader...');
     const vertexShader = this.compileShader(gl.VERTEX_SHADER, vertexShaderSource);
     if (!vertexShader) {
       console.error('[GALAXY] ❌ Vertex shader compilation failed');
       return;
     }
-    console.log('[GALAXY] ✅ Vertex shader compiled');
     
-    console.log('[GALAXY] Compiling fragment shader...');
     const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
     if (!fragmentShader) {
       console.error('[GALAXY] ❌ Fragment shader compilation failed');
       gl.deleteShader(vertexShader);
       return;
     }
-    console.log('[GALAXY] ✅ Fragment shader compiled');
     
     // Create program
-    console.log('[GALAXY] Creating and linking program...');
     this.program = gl.createProgram();
     gl.attachShader(this.program, vertexShader);
     gl.attachShader(this.program, fragmentShader);
@@ -327,7 +311,6 @@ export class GalaxyRenderer {
       this.program = null;
       return;
     }
-    console.log('[GALAXY] ✅ Program linked successfully');
     
     // Create quad for fullscreen
     const positions = new Float32Array([
@@ -347,7 +330,6 @@ export class GalaxyRenderer {
     };
     
     // Get uniform locations - handle arrays properly for WebGL
-    console.log('[GALAXY] Getting uniform locations...');
     this.uniformLocations = {
       time: gl.getUniformLocation(this.program, 'u_time'),
       resolution: gl.getUniformLocation(this.program, 'u_resolution'),
@@ -371,7 +353,6 @@ export class GalaxyRenderer {
     if (!this.uniformLocations.time || !this.uniformLocations.resolution) {
       console.warn('[GALAXY] ⚠️ Some uniform locations are null');
     }
-    console.log('[GALAXY] ✅ Uniform locations obtained');
   }
 
   /**

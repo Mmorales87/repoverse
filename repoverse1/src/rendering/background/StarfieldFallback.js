@@ -18,8 +18,6 @@ export class StarfieldFallback extends IBackground {
    * Initialize starfield
    */
   initialize() {
-    console.log('[STARFIELD] Creating fallback starfield...');
-    
     try {
       // Create starfield with procedural generation
       const starCount = 2000;
@@ -72,8 +70,6 @@ export class StarfieldFallback extends IBackground {
       
       this.starfield = new THREE.Points(geometry, material);
       this.scene.add(this.starfield);
-      
-      console.log('[STARFIELD] ✅ Fallback starfield created');
     } catch (error) {
       console.error('[STARFIELD] ❌ Error creating starfield:', error);
     }

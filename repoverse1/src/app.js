@@ -55,8 +55,6 @@ export class App {
    */
   async initialize() {
     try {
-      Logger.log(Logger.PREFIXES.APP, 'Starting initialization...');
-      
       // Initialize home screen FIRST (so it shows even if Three.js fails)
       await this._initializeHomeScreen();
 
@@ -68,8 +66,6 @@ export class App {
       this._checkUrlParams();
       this._startAnimationLoop();
       this._setupResizeHandler();
-      
-      Logger.success(Logger.PREFIXES.APP, 'Initialization complete');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.APP);
       if (this.homeScreen) {
@@ -83,13 +79,11 @@ export class App {
    * Single Responsibility: Home screen setup
    */
   async _initializeHomeScreen() {
-    Logger.log(Logger.PREFIXES.APP, 'Initializing HomeScreen...');
     const { HomeScreen } = await import('./ui/home/HomeScreen.js');
     this.homeScreen = new HomeScreen(document.body, (username) => {
       this.generateUniverse(username);
     });
     this.homeScreen.initialize();
-    Logger.success(Logger.PREFIXES.APP, 'HomeScreen initialized');
   }
 
   /**
@@ -97,7 +91,6 @@ export class App {
    * Single Responsibility: Canvas setup
    */
   _initializeCanvas() {
-    Logger.log(Logger.PREFIXES.APP, 'Getting canvas element...');
     this.canvas = document.getElementById('repoverse-canvas');
     if (!this.canvas) {
       throw new Error('Canvas element not found');
@@ -105,7 +98,6 @@ export class App {
     
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
-    Logger.success(Logger.PREFIXES.APP, `Canvas initialized: ${this.canvas.width}x${this.canvas.height}`);
   }
 
   /**
@@ -113,24 +105,19 @@ export class App {
    * Uses Factory pattern - Open/Closed Principle
    */
   async _initializeRendering() {
-    Logger.log(Logger.PREFIXES.APP, 'Initializing rendering components...');
-    
     // Scene renderer (required)
     this.sceneRenderer = await RendererFactory.createSceneRenderer(this.canvas);
-    Logger.success(Logger.PREFIXES.APP, 'SceneRenderer initialized');
     
     // Background renderer (optional - factory handles fallback)
     this.backgroundRenderer = await RendererFactory.createBackgroundRenderer(
       document.body,
       this.sceneRenderer.scene
     );
-    Logger.success(Logger.PREFIXES.APP, 'BackgroundRenderer initialized');
     
     // Background manager
     const { BackgroundManager } = await import('./rendering/background/BackgroundManager.js');
     this.backgroundManager = new BackgroundManager(this.sceneRenderer.scene);
     this.backgroundManager.initialize();
-    Logger.success(Logger.PREFIXES.APP, 'BackgroundManager initialized');
     
     // Effects manager
     const { EffectsManager } = await import('./rendering/effects/EffectsManager.js');
@@ -140,7 +127,6 @@ export class App {
       this.sceneRenderer.camera
     );
     this.effectsManager.initialize();
-    Logger.success(Logger.PREFIXES.APP, 'EffectsManager initialized');
   }
 
   /**
@@ -148,8 +134,6 @@ export class App {
    * Single Responsibility: UI setup
    */
   async _initializeUI() {
-    Logger.log(Logger.PREFIXES.APP, 'Initializing UI components...');
-    
     // Year Selector
     try {
       const { YearSelector } = await import('./ui/controls/YearSelector.js');
@@ -164,7 +148,6 @@ export class App {
         }
       );
       this.yearSelector.initialize();
-      Logger.success(Logger.PREFIXES.APP, 'YearSelector initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
       this.yearSelector = null;
@@ -175,7 +158,6 @@ export class App {
       const { PlanetDetailsPanel } = await import('./ui/panels/PlanetDetailsPanel.js');
       this.planetDetailsPanel = new PlanetDetailsPanel(document.body);
       this.planetDetailsPanel.initialize();
-      Logger.success(Logger.PREFIXES.APP, 'PlanetDetailsPanel initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
       this.planetDetailsPanel = null;
@@ -193,7 +175,6 @@ export class App {
         this.yearSelector,
         this // Pass app reference
       );
-      Logger.success(Logger.PREFIXES.APP, 'HUDManager initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
       this.hudManager = null;
@@ -203,7 +184,6 @@ export class App {
     try {
       const { ShareCard } = await import('./ui/shareCard.js');
       this.shareCard = new ShareCard(this);
-      Logger.success(Logger.PREFIXES.APP, 'ShareCard initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.APP, 'ShareCard');
     }
@@ -217,7 +197,6 @@ export class App {
       });
       // Initialize filter toggle - can be easily disabled by commenting this line
       this.filterToggleUI.initializeFilterToggle();
-      Logger.success(Logger.PREFIXES.APP, 'FilterToggleUI initialized');
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
       this.filterToggleUI = null;
@@ -255,9 +234,7 @@ export class App {
       return;
     }
     
-    Logger.log(Logger.PREFIXES.APP, 'Starting animation loop...');
     this.startAnimationLoop();
-    Logger.success(Logger.PREFIXES.APP, 'Animation loop started');
   }
 
   /**
@@ -321,7 +298,6 @@ export class App {
       // Fetch repositories from GitHub
       if (this.useMockData) {
         repositories = mockData.repositories;
-        Logger.log(Logger.PREFIXES.DATA, 'Using mock data');
       } else {
         try {
           // Use token if available (for development only)
@@ -384,8 +360,6 @@ export class App {
       // Hide home screen
       this.homeScreen?.hide();
       this.homeScreen?.hideLoading();
-
-      Logger.success(Logger.PREFIXES.APP, `Universe generated for ${username}: ${repositories.length} repositories`);
     } catch (error) {
       ErrorHandler.handleRuntimeError(error, Logger.PREFIXES.APP, 'generateUniverse');
       this.homeScreen?.showError('Error al generar el universo');
@@ -504,11 +478,6 @@ export class App {
     const animate = () => {
       requestAnimationFrame(animate);
       frameCount++;
-
-      // Log first frame
-      if (frameCount === 1) {
-        console.log('[ANIMATION] ✅ Frame 1 rendered - animation loop is working!');
-      }
 
       try {
         // Calculate delta time manually (don't interfere with SceneManager's clock)

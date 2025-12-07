@@ -220,7 +220,6 @@ export function generateSun(userData = {}, sumStars = 0) {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.anisotropy = 16; // High quality filtering
-        console.log('[GENERATORS] ✅ Sun texture (8K) loaded successfully');
       },
       undefined,
       (error) => {
@@ -235,7 +234,6 @@ export function generateSun(userData = {}, sumStars = 0) {
             sunMaterial.map = texture;
             sunMaterial.emissiveMap = texture;
             sunMaterial.needsUpdate = true;
-            console.log('[GENERATORS] ✅ Sun texture (2K) loaded as fallback');
           },
           undefined,
           (error2) => {
@@ -340,7 +338,6 @@ export function generatePlanet(repo, index) {
       // Use texture as emissiveMap too for better visibility
       material.emissiveMap = texture;
       material.needsUpdate = true;
-      console.log(`[GENERATORS] ✅ Planet texture ${textureIndex} loaded for ${repo.name}`);
     },
     undefined,
     (error) => {
@@ -395,7 +392,6 @@ export function generateBranches(repo, planetRadius) {
           branch.material.needsUpdate = true;
         }
       });
-      console.log('[GENERATORS] ✅ Moon texture loaded for branches');
     },
     undefined,
     (error) => {
@@ -608,7 +604,6 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
       });
       
       cometGroup.add(rocketModel);
-      console.log('[GENERATORS] ✅ Rocket model loaded for comet');
     },
     undefined,
     (error) => {
@@ -695,7 +690,6 @@ export function generateDecorativeRocket() {
       });
       
       rocketGroup.add(rocketModel);
-      console.log('[GENERATORS] ✅ Decorative rocket model loaded');
     },
     undefined,
     (error) => {
