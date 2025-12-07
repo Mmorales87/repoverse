@@ -90,13 +90,13 @@ export class HUDManager {
     exportBtn.id = 'hud-export-btn';
     exportBtn.textContent = 'Export PNG';
     exportBtn.style.cssText = `
-      padding: 10px 20px;
+      padding: 8px 16px;
       background: rgba(100, 100, 255, 0.8);
       border: none;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       transition: background 0.2s;
     `;
     exportBtn.onmouseover = () => exportBtn.style.background = 'rgba(100, 100, 255, 1)';
@@ -107,13 +107,13 @@ export class HUDManager {
     demoBtn.id = 'hud-demo-btn';
     demoBtn.textContent = 'Toggle Demo';
     demoBtn.style.cssText = `
-      padding: 10px 20px;
+      padding: 8px 16px;
       background: rgba(255, 150, 0, 0.8);
       border: none;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       transition: background 0.2s;
     `;
     demoBtn.onmouseover = () => demoBtn.style.background = 'rgba(255, 150, 0, 1)';
@@ -122,9 +122,9 @@ export class HUDManager {
     // Legend button
     const legendBtn = document.createElement('button');
     legendBtn.id = 'hud-legend-btn';
-    legendBtn.textContent = 'Leyenda';
+    legendBtn.textContent = 'Legend';
     legendBtn.style.cssText = `
-      padding: 10px 20px;
+      padding: 8px 16px;
       background: rgba(150, 100, 255, 0.8);
       border: none;
       border-radius: 5px;
@@ -137,24 +137,19 @@ export class HUDManager {
     legendBtn.onmouseout = () => legendBtn.style.background = 'rgba(150, 100, 255, 0.8)';
     legendBtn.onclick = () => this.toggleLegend();
     
-    topRight.appendChild(exportBtn);
-    topRight.appendChild(legendBtn);
-    topRight.appendChild(demoBtn);
-    
     // Share Card button
     const shareCardBtn = document.createElement('button');
     shareCardBtn.id = 'hud-share-card-btn';
     shareCardBtn.textContent = 'Export Year Card';
     shareCardBtn.style.cssText = `
-      padding: 10px 20px;
+      padding: 8px 16px;
       background: rgba(100, 181, 246, 0.8);
       border: none;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
       transition: background 0.2s;
-      margin-left: 10px;
     `;
     shareCardBtn.onmouseover = () => shareCardBtn.style.background = 'rgba(100, 181, 246, 1)';
     shareCardBtn.onmouseout = () => shareCardBtn.style.background = 'rgba(100, 181, 246, 0.8)';
@@ -163,7 +158,10 @@ export class HUDManager {
         this.app.shareCard.generateYearCard();
       }
     };
+    topRight.appendChild(exportBtn);
     topRight.appendChild(shareCardBtn);
+    topRight.appendChild(legendBtn);
+    /* topRight.appendChild(demoBtn); */
     
     // Rate-limit banner
     const rateLimitBanner = document.createElement('div');
@@ -183,10 +181,10 @@ export class HUDManager {
     `;
     rateLimitBanner.innerHTML = `
       <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
-        Rate Limit Alcanzado
+        Rate Limit Reached
       </div>
       <div style="font-size: 14px;">
-        Usando modo demo con datos mock
+        Using demo mode with mock data
       </div>
     `;
     
@@ -204,7 +202,7 @@ export class HUDManager {
       username: usernameEl,
       stats: statsEl,
       exportBtn: exportBtn,
-      demoBtn: demoBtn,
+      /* demoBtn: demoBtn, */
       legendBtn: legendBtn,
       shareCardBtn: shareCardBtn,
       rateLimitBanner: rateLimitBanner,
@@ -241,7 +239,7 @@ export class HUDManager {
     
     panel.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; font-size: 24px; color: #9664FF;">Leyenda</h2>
+        <h2 style="margin: 0; font-size: 24px; color: #9664FF;">Legend</h2>
         <button id="legend-close-btn" style="
           background: transparent;
           border: none;
@@ -267,59 +265,49 @@ export class HUDManager {
         </thead>
         <tbody>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">SOL</td>
-            <td style="padding: 10px;">Usuario / organización</td>
-            <td style="padding: 10px;">Punto central del sistema, influencia global, brillo/halo; puede irradiar partículas o pulso de energía</td>
+            <td style="padding: 10px; font-weight: bold;">Sun</td>
+            <td style="padding: 10px;">User / organization</td>
+            <td style="padding: 10px;">Central point of the system, global influence, brightness/halo; can emit particles or energy pulse</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Repo</td>
-            <td style="padding: 10px;">Planeta</td>
-            <td style="padding: 10px;">Unidad central, punto de interacción</td>
+            <td style="padding: 10px; font-weight: bold;">Repository</td>
+            <td style="padding: 10px;">Planet</td>
+            <td style="padding: 10px;">Central unit, interaction point</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Peso del repositorio</td>
-            <td style="padding: 10px;">Tamaño / masa</td>
-            <td style="padding: 10px;">Tamaño del código (KB)</td>
+            <td style="padding: 10px; font-weight: bold;">Repository weight</td>
+            <td style="padding: 10px;">Size / mass</td>
+            <td style="padding: 10px;">Code size (KB)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Branches</td>
-            <td style="padding: 10px;">Lunas / Ramas</td>
-            <td style="padding: 10px;">Ramas del repositorio (main/master más grande y brillante)</td>
+            <td style="padding: 10px;">Moons / Branches</td>
+            <td style="padding: 10px;">Branches of the repository (main/master largest and brightest)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">PRs</td>
-            <td style="padding: 10px;">Cohetes / Naves espaciales</td>
-            <td style="padding: 10px;">Pull Requests en revisión (modelo GLTF 3D)</td>
+            <td style="padding: 10px;">Rockets / Spacecraft</td>
+            <td style="padding: 10px;">Pull Requests in review</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <td style="padding: 10px; font-weight: bold;">Commits recientes</td>
-            <td style="padding: 10px;">Cometas</td>
-            <td style="padding: 10px;">Actividad en últimas 24-48h (aparecen temporalmente)</td>
+            <td style="padding: 10px;">Comets</td>
+            <td style="padding: 10px;">Activity in last 24-48h (appear temporarily)</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Watchers</td>
-            <td style="padding: 10px;">Halo / brillo</td>
-            <td style="padding: 10px;">Atención / popularidad</td>
+            <td style="padding: 10px; font-weight: bold;">Main language</td>
+            <td style="padding: 10px;">Color / Planet tint</td>
+            <td style="padding: 10px;">Color tint over planet texture</td>
           </tr>
           <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Contributors</td>
-            <td style="padding: 10px;">Partículas / lunas</td>
-            <td style="padding: 10px;">Comunidad y colaboración</td>
-          </tr>
-          <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Lenguaje principal</td>
-            <td style="padding: 10px;">Color / Matiz del planeta</td>
-            <td style="padding: 10px;">Matiz de color sobre textura del planeta</td>
-          </tr>
-          <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <td style="padding: 10px; font-weight: bold;">Actividad reciente</td>
-            <td style="padding: 10px;">Velocidad / pulso</td>
-            <td style="padding: 10px;">Dinamismo</td>
+            <td style="padding: 10px; font-weight: bold;">Recent activity</td>
+            <td style="padding: 10px;">Orbital speed</td>
+            <td style="padding: 10px;">Repositories with most commits in last 30 days orbit faster around the sun</td>
           </tr>
           <tr>
-            <td style="padding: 10px; font-weight: bold;">Edad</td>
-            <td style="padding: 10px;">Radio orbital</td>
-            <td style="padding: 10px;">Antigüedad relativa del repo</td>
+            <td style="padding: 10px; font-weight: bold;">Age</td>
+            <td style="padding: 10px;">Orbital radius</td>
+            <td style="padding: 10px;">Relative age of the repo</td>
           </tr>
         </tbody>
       </table>

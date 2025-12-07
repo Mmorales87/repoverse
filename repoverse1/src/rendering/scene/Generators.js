@@ -93,7 +93,7 @@ export function calculateOrbitalSpeed(commitsLast30, maxCommitsLast30) {
     0,
     1
   );
-  return 0.0005 + normalizedRecent * 0.003;
+  return 0.005 + normalizedRecent * 0.005;
 }
 
 /**

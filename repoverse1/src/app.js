@@ -378,8 +378,8 @@ export class App {
       // Generate universe with current snapshot
       this.updateUniverseSnapshot();
 
-      // Update HUD
-      this.hudManager?.updateUserData(username, stats);
+      // HUD is already updated in updateUniverseSnapshot() with filtered stats
+      // No need to update again with all repos stats
 
       // Hide home screen
       this.homeScreen?.hide();
@@ -462,6 +462,14 @@ export class App {
         daysSinceCreationAtSnapshot: Math.max(0, daysSinceCreationAtSnapshot)
       };
     });
+    
+    // Calculate stats from FILTERED repos (what's actually visible on screen)
+    const filteredStats = this.calculateStats(reposWithSnapshotAge);
+    
+    // Update HUD with filtered stats (reactive to year and filter mode)
+    if (this.hudManager && this.currentUsername) {
+      this.hudManager.updateUserData(this.currentUsername, filteredStats);
+    }
     
     // Use total stars from ALL repos (not filtered) for consistent sun size
     // This ensures the sun size remains constant regardless of year or filter mode
