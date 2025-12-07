@@ -27,18 +27,19 @@ export class ShareCard {
     const year = this.app.snapshotDate.getFullYear();
     const username = this.app.currentUsername || 'user';
     
-    // Filter repositories visible at snapshot date
-    const visibleRepos = this.app.allRepositories.filter(repo => {
-      if (!repo.createdAt) return false;
-      const repoDate = new Date(repo.createdAt);
-      return repoDate <= this.app.snapshotDate;
-    });
+    // Filter repositories using the same filter as visualization (respects year and checkbox mode)
+    const filterMode = this.app.filterMode || 'all';
+    const visibleRepos = this.app.repositoryFilterManager.filterRepositories(
+      this.app.allRepositories,
+      year,
+      filterMode
+    );
 
     // Calculate statistics for the year
     const stats = this.calculateYearStats(visibleRepos, year);
     
     // Generate card image
-    const canvas = this.createYearCardCanvas(stats, year, username);
+    const canvas = this.createYearCardCanvas(stats, year, username, filterMode);
     
     // Download
     const dataURL = canvas.toDataURL('image/png');
@@ -90,9 +91,26 @@ export class ShareCard {
   }
 
   /**
+   * Helper function to draw rounded rectangle
+   */
+  drawRoundedRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  /**
    * Create canvas with year statistics card - Modern design
    */
-  createYearCardCanvas(stats, year, username) {
+  createYearCardCanvas(stats, year, username, filterMode = 'all') {
     const width = 1400;
     const height = 900;
     const canvas = document.createElement('canvas');
@@ -119,9 +137,13 @@ export class ShareCard {
       ctx.fill();
     }
 
-    // Header section with accent line
-    ctx.fillStyle = '#64b5f6';
-    ctx.fillRect(0, 0, width, 4);
+    // Header section with accent line (thicker and with gradient)
+    const accentGradient = ctx.createLinearGradient(0, 0, width, 0);
+    accentGradient.addColorStop(0, '#64b5f6');
+    accentGradient.addColorStop(0.5, '#90caf9');
+    accentGradient.addColorStop(1, '#64b5f6');
+    ctx.fillStyle = accentGradient;
+    ctx.fillRect(0, 0, width, 5);
     
     // Username - Large and bold
     ctx.fillStyle = '#ffffff';
@@ -133,31 +155,41 @@ export class ShareCard {
     // Year badge
     const yearText = `${year}`;
     ctx.font = 'bold 42px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#64b5f6';
+    ctx.fillStyle = '#ffffff';
     ctx.fillText(yearText, width / 2, 110);
     
     // Decorative line under year
-    ctx.strokeStyle = '#64b5f6';
+    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(width / 2 - 60, 160);
     ctx.lineTo(width / 2 + 60, 160);
     ctx.stroke();
 
+    // Dynamic text based on filter mode
+    const filterText = filterMode === 'active' 
+      ? `Active repositories year ${year}`
+      : `Total repositories from start GitHub to ${year} year`;
+    ctx.fillStyle = 'rgba(176, 190, 197, 0.9)';
+    ctx.font = '18px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(filterText, width / 2, 180);
+
     // Stats grid with modern cards
-    const statsY = 220;
+    const statsY = 240; // Moved down to accommodate filter text
     const cardWidth = 280;
     const cardHeight = 140;
     const cardSpacing = 40;
     const startX = (width - (3 * cardWidth + 2 * cardSpacing)) / 2;
     
     const statsData = [
-      { label: 'Repositorios', value: stats.totalRepos, icon: '🪐' },
+      { label: 'Public repositories', value: stats.totalRepos, icon: '🪐' },
 { label: 'Commits', value: stats.totalCommits.toLocaleString(), icon: '☄️' },
 { label: 'Stars', value: stats.totalStars.toLocaleString(), icon: '⭐' },
-{ label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '🛠️' },
+{ label: 'Forks', value: stats.totalForks.toLocaleString(), icon: '�' },
 { label: 'Branches', value: stats.totalBranches, icon: '🌙' },
-{ label: 'Nuevos', value: stats.reposCreatedThisYear, icon: '➕'},
+{ label: 'New repositories', value: stats.reposCreatedThisYear, icon: '➕'},
 
     ];
 
@@ -167,29 +199,45 @@ export class ShareCard {
       const col = index % 3;
       const x = startX + col * (cardWidth + cardSpacing);
       const y = statsY + row * (cardHeight + cardSpacing);
+      const cardRadius = 16;
       
-      // Card background with glow
+      // Card background with glow and rounded corners
       const cardGradient = ctx.createLinearGradient(x, y, x + cardWidth, y + cardHeight);
-      cardGradient.addColorStop(0, 'rgba(100, 181, 246, 0.15)');
-      cardGradient.addColorStop(1, 'rgba(100, 181, 246, 0.05)');
+      cardGradient.addColorStop(0, 'rgba(100, 181, 246, 0.2)');
+      cardGradient.addColorStop(1, 'rgba(100, 181, 246, 0.08)');
       ctx.fillStyle = cardGradient;
-      ctx.fillRect(x, y, cardWidth, cardHeight);
+      this.drawRoundedRect(ctx, x, y, cardWidth, cardHeight, cardRadius);
+      ctx.fill();
       
-      // Card border
-      ctx.strokeStyle = 'rgba(100, 181, 246, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, cardWidth, cardHeight);
+      // Card border with rounded corners
+      ctx.strokeStyle = 'rgba(100, 181, 246, 0.4)';
+      ctx.lineWidth = 1.5;
+      this.drawRoundedRect(ctx, x, y, cardWidth, cardHeight, cardRadius);
+      ctx.stroke();
       
-      // Icon
+      // Icon with subtle shadow
+      ctx.shadowColor = 'rgba(100, 181, 246, 0.3)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
       ctx.font = '36px Arial';
       ctx.fillStyle = '#64b5f6';
       ctx.textAlign = 'left';
       ctx.fillText(stat.icon, x + 20, y + 20);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       
-      // Value - Large and bold
+      // Value - Large and bold with subtle shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetY = 1;
       ctx.font = 'bold 42px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(stat.value.toString(), x + 20, y + 70);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       
       // Label
       ctx.font = '18px "Segoe UI", Arial, sans-serif';
@@ -213,46 +261,47 @@ export class ShareCard {
       
       stats.topLanguages.forEach((lang, index) => {
         const x = langStartX + index * langSpacing;
-        const badgeY = langY + 50;
+        const badgeY = langY + 80;
+        const badgeWidth = 100;
+        const badgeHeight = 90;
+        const badgeRadius = 10;
+        const badgeX = x - badgeWidth / 2;
+        const badgeTop = badgeY - 20;
         
-        // Badge background
-        const badgeGradient = ctx.createLinearGradient(x - 50, badgeY - 20, x + 50, badgeY + 60);
-        badgeGradient.addColorStop(0, 'rgba(100, 181, 246, 0.2)');
-        badgeGradient.addColorStop(1, 'rgba(100, 181, 246, 0.1)');
+        // Badge background with more padding
+        const badgeGradient = ctx.createLinearGradient(badgeX, badgeTop, badgeX + badgeWidth, badgeTop + badgeHeight);
+        badgeGradient.addColorStop(0, 'rgba(100, 181, 246, 0.25)');
+        badgeGradient.addColorStop(1, 'rgba(100, 181, 246, 0.12)');
         ctx.fillStyle = badgeGradient;
-        // Draw rounded rectangle manually
-        const radius = 8;
-        ctx.beginPath();
-        ctx.moveTo(x - 50 + radius, badgeY - 20);
-        ctx.lineTo(x + 50 - radius, badgeY - 20);
-        ctx.quadraticCurveTo(x + 50, badgeY - 20, x + 50, badgeY - 20 + radius);
-        ctx.lineTo(x + 50, badgeY + 60 - radius);
-        ctx.quadraticCurveTo(x + 50, badgeY + 60, x + 50 - radius, badgeY + 60);
-        ctx.lineTo(x - 50 + radius, badgeY + 60);
-        ctx.quadraticCurveTo(x - 50, badgeY + 60, x - 50, badgeY + 60 - radius);
-        ctx.lineTo(x - 50, badgeY - 20 + radius);
-        ctx.quadraticCurveTo(x - 50, badgeY - 20, x - 50 + radius, badgeY - 20);
-        ctx.closePath();
+        this.drawRoundedRect(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, badgeRadius);
         ctx.fill();
         
-        // Language name
+        // Badge border
+        ctx.strokeStyle = 'rgba(100, 181, 246, 0.4)';
+        ctx.lineWidth = 1.5;
+        this.drawRoundedRect(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, badgeRadius);
+        ctx.stroke();
+        
+        // Language name - with more top padding
+        ctx.textBaseline = 'top';
         ctx.fillStyle = '#64b5f6';
         ctx.font = 'bold 20px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(lang.language, x, badgeY + 5);
+        ctx.fillText(lang.language, x, badgeTop + 12);
         
-        // Count
+        // Count - with more bottom padding (moved up slightly to leave more space at bottom)
+        ctx.textBaseline = 'top';
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-        ctx.fillText(lang.count.toString(), x, badgeY + 35);
+        ctx.fillText(lang.count.toString(), x, badgeTop + 45);
       });
     }
 
     // Footer with subtle branding
-    ctx.fillStyle = 'rgba(176, 190, 197, 0.5)';
+    ctx.fillStyle = 'rgba(176, 190, 197, 0.7)';
     ctx.font = '16px "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('RepoVerse', width / 2, height - 25);
+    ctx.fillText('RepoVerse by stayandcode', width / 2, height - 25);
 
     return canvas;
   }
