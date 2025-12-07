@@ -28,6 +28,8 @@ export class HomeScreen {
       position: fixed;
       top: 0;
       left: 0;
+      padding-left: 20px;
+      padding-right: 20px;
       width: 100%;
       height: 100%;
       background: linear-gradient(135deg, #1e1e2e 0%, #000000 100%);
@@ -53,7 +55,7 @@ export class HomeScreen {
     `;
     
     const subtitle = document.createElement('p');
-    subtitle.textContent = 'Visualiza tus repositorios de GitHub como un universo 3D';
+    subtitle.textContent = 'Visualice your GitHub repositories as a 3D universe';
     subtitle.style.cssText = `
       font-size: 18px;
       opacity: 0.7;
@@ -77,7 +79,7 @@ export class HomeScreen {
     `;
     
     const label = document.createElement('label');
-    label.textContent = 'Usuario de GitHub';
+    label.textContent = 'GitHub username';
     label.style.cssText = `
       font-size: 14px;
       opacity: 0.8;
@@ -106,7 +108,7 @@ export class HomeScreen {
     
     const generateBtn = document.createElement('button');
     generateBtn.id = 'home-generate-btn';
-    generateBtn.textContent = 'Generar Universo';
+    generateBtn.textContent = 'Generate Universe';
     generateBtn.style.cssText = `
       padding: 14px 24px;
       background: linear-gradient(90deg, #64b5f6, #42a5f5);
@@ -135,13 +137,24 @@ export class HomeScreen {
     };
     
     const info = document.createElement('p');
-    info.textContent = 'Usa la API pública de GitHub. Sin tokens requeridos.';
     info.style.cssText = `
       font-size: 12px;
       opacity: 0.5;
       margin-top: 20px;
       text-align: center;
     `;
+    const link = document.createElement('a');
+    link.href = 'https://stayandcode.com';
+    link.textContent = 'Developed by stayandcode.com';
+    link.style.cssText = `
+      color: inherit;
+      text-decoration: underline;
+      opacity: 0.7;
+      cursor: pointer;
+    `;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    info.appendChild(link);
     
     form.appendChild(inputGroup);
     form.appendChild(generateBtn);
@@ -179,7 +192,7 @@ export class HomeScreen {
     `;
     
     const loadingText = document.createElement('p');
-    loadingText.textContent = 'Cargando repositorios...';
+    loadingText.textContent = 'Loading repositories...';
     loadingText.style.cssText = `
       margin-top: 20px;
       font-size: 16px;
@@ -210,7 +223,7 @@ export class HomeScreen {
     }
     if (this.elements.generateBtn) {
       this.elements.generateBtn.disabled = true;
-      this.elements.generateBtn.textContent = 'Cargando...';
+      this.elements.generateBtn.textContent = 'Loading...';
     }
     
     // Load Lottie animation if not already loaded
@@ -237,7 +250,7 @@ export class HomeScreen {
     }
     if (this.elements.generateBtn) {
       this.elements.generateBtn.disabled = false;
-      this.elements.generateBtn.textContent = 'Generar Universo';
+      this.elements.generateBtn.textContent = 'Generate Universe';
     }
     
     // Pause Lottie animation (but don't destroy it, so it can be reused)

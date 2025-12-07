@@ -5,13 +5,13 @@ import { App } from './app.js';
  */
 async function main() {
   try {
-    console.log('[MAIN] Starting RepoVerse initialization...');
+    console.log('[MAIN] Starting RepoVerse.js initialization...');
     
     // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) loadingIndicator.remove();
     
-    console.log('[MAIN] Creating App instance...');
+    console.log('[MAIN] Creating App.js instance...');
     const app = new App();
     
     console.log('[MAIN] Calling app.initialize()...');
@@ -20,12 +20,12 @@ async function main() {
     // Store app instance globally for debugging
     window.repoverseApp = app;
     
-    console.log('[MAIN] ✅ RepoVerse initialized successfully');
+    console.log('[MAIN] ✅ RepoVerse.js initialized successfully');
   } catch (error) {
     // Remove loading indicator
     const loadingIndicator = document.getElementById('loading-indicator');
     if (loadingIndicator) loadingIndicator.remove();
-    console.error('Failed to initialize RepoVerse:', error);
+    console.error('Failed to initialize RepoVerse.js:', error);
     console.error('Stack:', error.stack);
     
     // Show error message
@@ -47,7 +47,7 @@ async function main() {
     errorDiv.innerHTML = `
       <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Error</div>
       <div>${error.message}</div>
-      <div style="font-size: 12px; margin-top: 10px; opacity: 0.8;">Revisa la consola para más detalles</div>
+      <div style="font-size: 12px; margin-top: 10px; opacity: 0.8;">Check the console for more details</div>
     `;
     document.body.appendChild(errorDiv);
   }

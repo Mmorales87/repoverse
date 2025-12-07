@@ -307,7 +307,7 @@ export class App {
    */
   async generateUniverse(username) {
     if (!this.sceneRenderer) {
-      this.homeScreen?.showError('3D no está inicializado. Por favor recarga la página.');
+      this.homeScreen?.showError('3D is not initialized. Please reload the page.');
       return;
     }
 
@@ -345,7 +345,7 @@ export class App {
             repositories = mockData.repositories;
             this.useMockData = true;
           } else if (error.message === 'USER_NOT_FOUND') {
-            this.homeScreen?.showError('Usuario no encontrado');
+            this.homeScreen?.showError('User not found');
             this.homeScreen?.hideLoading();
             return;
           } else {
