@@ -2,6 +2,7 @@
 import { ErrorHandler } from './utils/ErrorHandler.js';
 import { Logger } from './utils/Logger.js';
 import { RendererFactory } from './core/factories/RendererFactory.js';
+import { RepositoryFilterManager } from './core/managers/RepositoryFilterManager.js';
 
 // Dynamic imports to avoid circular dependencies and improve code splitting
 
@@ -30,6 +31,7 @@ export class App {
     this.yearSelector = null;
     this.planetDetailsPanel = null;
     this.shareCard = null;
+    this.filterToggleUI = null;
     
     // State
     this.currentUsername = null;
@@ -37,6 +39,10 @@ export class App {
     this.snapshotDate = new Date();
     this.ageMapping = 'older-farther';
     this.allRepositories = [];
+    this.filterMode = 'active'; // Default: show only active repos
+    
+    // Managers
+    this.repositoryFilterManager = new RepositoryFilterManager();
     
     // Interaction
     this.raycaster = new THREE.Raycaster();
@@ -200,6 +206,21 @@ export class App {
     } catch (error) {
       ErrorHandler.handleInitError(error, Logger.PREFIXES.APP, 'ShareCard');
     }
+
+    // Filter Toggle UI
+    try {
+      const { FilterToggleUI } = await import('./ui/controls/FilterToggleUI.js');
+      this.filterToggleUI = new FilterToggleUI(document.body, (mode) => {
+        this.filterMode = mode;
+        this.updateUniverseSnapshot();
+      });
+      // Initialize filter toggle - can be easily disabled by commenting this line
+      this.filterToggleUI.initializeFilterToggle();
+      Logger.success(Logger.PREFIXES.APP, 'FilterToggleUI initialized');
+    } catch (error) {
+      ErrorHandler.handleInitError(error, Logger.PREFIXES.UI, null);
+      this.filterToggleUI = null;
+    }
   }
 
   /**
@@ -334,11 +355,14 @@ export class App {
         }
       }
 
-      // Calculate stats
-      const stats = this.calculateStats(repositories);
+      // Enrich repositories with lastCommitYear (cache once on load)
+      const enrichedRepositories = this.repositoryFilterManager.enrichReposWithLastCommitYear(repositories);
       
-      // Store repositories for snapshot filtering
-      this.allRepositories = repositories;
+      // Calculate stats
+      const stats = this.calculateStats(enrichedRepositories);
+      
+      // Store enriched repositories for snapshot filtering
+      this.allRepositories = enrichedRepositories;
       
       // Calculate account creation year for year selector
       const accountCreationYear = this.calculateAccountCreationYear(repositories);
@@ -407,20 +431,23 @@ export class App {
   }
 
   /**
-   * Update universe based on current snapshot date
+   * Update universe based on current snapshot date and filter mode
    */
   updateUniverseSnapshot() {
     if (!this.allRepositories || !this.sceneRenderer) return;
     
-    // Filter repositories visible at snapshot date
-    const visibleRepos = this.allRepositories.filter(repo => {
-      if (!repo.createdAt) return false;
-      const repoDate = new Date(repo.createdAt);
-      return repoDate <= this.snapshotDate;
-    });
+    // Get selected year from snapshot date
+    const selectedYear = this.snapshotDate.getFullYear();
+    
+    // Apply filter based on mode (active or all)
+    const filteredRepos = this.repositoryFilterManager.filterRepositories(
+      this.allRepositories,
+      selectedYear,
+      this.filterMode
+    );
     
     // Calculate daysSinceCreationAtSnapshot for each repo
-    const reposWithSnapshotAge = visibleRepos.map(repo => {
+    const reposWithSnapshotAge = filteredRepos.map(repo => {
       const repoDate = new Date(repo.createdAt);
       const daysSinceCreationAtSnapshot = Math.floor(
         (this.snapshotDate - repoDate) / (1000 * 60 * 60 * 24)
@@ -435,7 +462,7 @@ export class App {
     // Calculate total stars for sun size
     const sumStars = reposWithSnapshotAge.reduce((sum, repo) => sum + (repo.stars || 0), 0);
     
-    // Generate universe with snapshot data
+    // Generate universe with filtered snapshot data
     this.sceneRenderer.generateUniverse(reposWithSnapshotAge, {
       username: this.currentUsername,
       snapshotDate: this.snapshotDate,
@@ -559,6 +586,7 @@ export class App {
     this.homeScreen?.dispose();
     this.yearSelector?.dispose();
     this.planetDetailsPanel?.hide();
+    this.filterToggleUI?.dispose();
   }
 }
 
