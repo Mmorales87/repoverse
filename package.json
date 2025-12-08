@@ -1,0 +1,19 @@
+{
+  "name": "repoverse-web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "RepoVerse - Visualize GitHub repositories as a 3D universe",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lottie-web": "^5.13.0",
+    "ogl": "^1.0.11",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
