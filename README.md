@@ -1,228 +1,177 @@
-# RepoVerse
+# RepoVerse Web
 
-Your Git Universe. Reimagined - 3D visualization of GitHub and Bitbucket repositories
+Visualize your GitHub repositories as an interactive 3D universe. Each repository becomes a planet with moons, rings, and dynamic visual effects.
 
-## Description
-
-RepoVerse is a Flutter Web application that creates a beautiful 3D universe visualization of your GitHub and Bitbucket repositories. Each repository becomes a planet orbiting in space, with visualizations based on repository activity, languages, and other metrics.
-
-## Visual Design
-
-The 3D universe uses a rich visual language to represent different repository metrics:
-
-| Elemento           | Representa           | Función visual                       |
-|-------------------|---------------------|-------------------------------------|
-| Repo              | Planeta            | Unidad central, punto de interacción |
-| Commits totales   | Tamaño / masa      | Evolución y actividad global        |
-| Forks             | Lunas              | Popularidad / difusión              |
-| Branches          | Anillos            | Complejidad interna                 |
-| Releases          | Anillos o cápsulas | Hitos importantes                   |
-| PRs               | Satélites          | Cambios en revisión                 |
-| Issues            | Tormentas / manchas| Problemas pendientes                |
-| Watchers          | Halo / brillo      | Atención / popularidad              |
-| Contributors      | Partículas / lunas | Comunidad y colaboración            |
-| Lenguaje principal| Color / material   | Diferenciación rápida               |
-| Actividad reciente| Velocidad / pulso  | Dinamismo / ritmo                   |
-| Edad              | Radio orbital      | Timeline espacial                    |
-
-### Current Implementation
-
-Currently implemented visual elements:
-- **Planets (Repositories)**: Colored spheres representing repositories, with color based on primary programming language
-- **Moons (Forks)**: Small gray spheres orbiting around planets, representing the number of forks
-- **Rings (Branches)**: Semi-transparent colored rings around planets, representing complexity (based on commit count as a proxy for branches)
-- **Stars**: White dots in the background creating a starfield effect
-
-### Controls
-
-- **Left-click + Drag**: Rotate the camera around the scene
-- **Right-click + Drag**: Pan the camera (move the view)
-- **Scroll Wheel**: Zoom in/out
-- **Reset Button**: Return camera to initial position
-
-## Getting Started
-
-### Prerequisites
-
-- Flutter SDK (3.10.1 or higher)
-- Dart SDK
-- Chrome browser (for web development)
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd repoverse
-```
-
-2. Install dependencies:
-```bash
-flutter pub get
-```
-
-3. Run the application:
-```bash
-flutter run -d chrome
-```
-
-## Configuration
-
-### Environment Variables
-
-The application can use GitHub and Bitbucket tokens to fetch your repositories. Tokens are optional - the app will work in demo mode with mock data if no tokens are provided.
-
-#### Setting up tokens (optional)
-
-1. Create `assets/.env` file (copy from `assets/.env.example` if it exists):
-```bash
-cp assets/.env.example assets/.env
-```
-
-2. Edit `assets/.env` and add your tokens:
-```
-GITHUB_TOKEN=your_github_token_here
-BITBUCKET_TOKEN=your_bitbucket_token_here
-```
-
-#### Getting a GitHub Token
-
-1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
-2. Generate a new token (classic)
-3. Select scope: `public_repo` (for public repositories)
-4. Copy the token and add it to `assets/.env`
-
-#### Getting a Bitbucket Token
-
-1. Go to [Bitbucket Settings > App passwords](https://bitbucket.org/account/settings/app-passwords/)
-2. Create a new app password
-3. Select permission: `Repositories: Read`
-4. Copy the password and add it to `assets/.env`
-
-### Important Security Note
-
-**⚠️ WARNING: Do not put permanent tokens in frontend code for production!**
-
-The `.env` file is bundled with the Flutter web app, which means tokens are visible in the client-side code. This is acceptable for:
-- Local development
-- Personal/demo projects
-- Testing
-
-For production deployments, consider:
-- Using a backend service (e.g., Firebase Functions, AWS Lambda) to proxy API requests
-- Implementing OAuth flow for user authentication
-- Using environment variables at build time (not bundled in the app)
-
-## Usage
-
-1. Launch the app: `flutter run -d chrome`
-2. Enter your GitHub username (optional)
-3. Enter your Bitbucket username (optional)
-4. Click "Generate Universe" to create your 3D visualization
-
-### Demo Mode
-
-If no tokens are provided, the app runs in demo mode with mock repository data. This is perfect for:
-- Testing the 3D visualization
-- Demonstrating the app without API access
-- Development when rate limits are reached
-
-## Troubleshooting
-
-### Rate Limit Errors
-
-If you see a "Rate limit reached" error:
-
-**GitHub:**
-- Unauthenticated requests: 60 requests/hour
-- Authenticated requests: 5,000 requests/hour
-- Solution: Add a `GITHUB_TOKEN` to `assets/.env` or wait for the rate limit to reset
-
-**Bitbucket:**
-- Rate limits vary by account type
-- Solution: Add a `BITBUCKET_TOKEN` to `assets/.env` or wait for the rate limit to reset
-
-The app will automatically fall back to mock data if rate limits are reached.
-
-### Three.js Not Loading
-
-If you see a "Three.js failed to load" error:
-
-1. Check the browser console for JavaScript errors
-2. Verify your internet connection (Three.js loads from CDN)
-3. Try refreshing the page
-4. Check that `web/index.html` includes the Three.js script tag
-
-The app will retry loading Three.js up to 5 times before showing an error.
-
-### Environment File Not Found
-
-If you see warnings about `.env` file not found:
-
-- This is normal if you haven't created `assets/.env`
-- The app will work in demo mode without tokens
-- Create `assets/.env` only if you want to use real API data
-
-### Build Errors
-
-If you encounter build errors:
-
-1. Run `flutter clean`
-2. Run `flutter pub get`
-3. Delete `build/` directory if it exists
-4. Try building again: `flutter run -d chrome`
-
-## Project Structure
-
-```
-lib/
-├── core/              # Core services and models
-│   ├── github/       # GitHub API service
-│   ├── bitbucket/    # Bitbucket API service
-│   └── models/       # Data models
-├── engine/           # Three.js rendering engine
-│   ├── generators/  # 3D object generators
-│   └── effects/     # Visual effects
-└── ui/               # Flutter UI components
-    ├── screens/      # Main screens
-    └── widgets/      # Reusable widgets
-
-web/
-├── index.html        # HTML entry point
-└── three_bridge.js   # JavaScript bridge for Three.js
-
-assets/
-└── .env              # Environment variables (not in git)
-```
-
-## Development
-
-### Running Tests
+## 🚀 Quick Start
 
 ```bash
-flutter test
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-### Building for Production
+The application will be available at `http://localhost:5173`
+
+## 📋 Requirements
+
+- Node.js 16+ 
+- npm or yarn
+
+## 🔑 GitHub API
+
+**No authentication required!** This project uses the public GitHub API without tokens, just like [GithubCity](https://github.com/unixzii/GithubCity). The rate limit is **60 requests/hour per IP address**, which is sufficient for most use cases.
+
+If you reach the rate limit, the application will automatically fall back to mock data for demonstration purposes.
+
+## 🎮 Usage
+
+1. Open the application in your browser
+2. Enter a GitHub username
+3. Click "Generate Universe"
+4. Explore the interactive 3D universe
+
+## 📊 Mapping Table
+
+| Element           | Represents           | Visual Function                       |
+|-------------------|---------------------|--------------------------------------|
+| Sun               | User / organization | System center, global influence, particles; can radiate particles or energy pulse |
+| Repo              | Planet              | Central unit, interaction point      |
+| Size (KB)         | Planet radius / mass | Repository size determines planet size |
+| Branches          | Orbital spheres     | Internal complexity (orbital spheres around planet) |
+| PRs               | GLTF rockets (satellites) | Changes under review (orbital rockets) |
+| Comets            | Recent commits (24-48h) | Rockets crossing system for recent activity |
+| Main language      | Color / material    | Quick differentiation                 |
+| Recent activity    | Orbital speed       | Dynamism / rhythm                     |
+| Age                | Orbital radius      | Spatial timeline                      |
+| Forks             | Moons               | 🚧 Planned for future updates |
+| Releases          | Rings or capsules   | 🚧 Planned for future updates |
+| Issues             | Storms / spots       | 🚧 Planned for future updates |
+| Watchers           | Halo / glow         | 🚧 Planned for future updates |
+| Contributors       | Particles / moons   | 🚧 Planned for future updates |
+
+## 🔢 Visual Mapping Formulas
+
+### Planet Radius
+```
+radius = clamp(log10(size) * 1.5, 1.6, 18.0)
+```
+The planet size represents the repository size in KB (not total commits).
+
+### Orbital Speed
+```
+normalizedRecent = clamp(log10(commitsLast30 + 1) / log10(maxCommitsLast30 + 1), 0, 1)
+orbitalSpeed = 0.005 + normalizedRecent * 0.005
+```
+The orbital speed represents recent activity.
+
+### Orbital Radius
+```
+baseRadius = 30
+ageFactor = 0.5
+orbitalRadius = baseRadius + ageFactor * sqrt(daysSinceCreationAtSnapshot)
+```
+The distance from the sun represents repository age.
+
+### Visual Mass (for LensPass)
+```
+mass = clamp(radius * (1 + log10(size)), 0.5, 100.0)
+```
+Mass affects the gravitational lensing effect in the background.
+
+### Branch Orbit Dimensions
+```
+branchBaseGap = max(planetRadius * 0.15, 1.0)
+branchSpacing = max(planetRadius * 0.12, 0.8)
+branchOrbitRadius_i = planetRadius + branchBaseGap + i * branchSpacing
+branchSize = clamp(log2(branchesCount) * 0.4, 0.2, planetRadius * 0.4)
+```
+Branches are rendered as orbital spheres around the planet.
+
+### Halo Intensity
+```
+haloIntensity = clamp(log10(stars) * 0.6, 0.1, 3.0)
+```
+🚧 Planned for future updates - Currently calculated but not used in rendering.
+
+### Number of Moons
+```
+numMoons = min(round(log2(forks + 1)), 8)
+```
+🚧 Planned for future updates - Moons will represent repository forks.
+
+## 🎨 Features
+
+- **Interactive 3D Universe**: Navigate through your repositories as planets
+- **Dynamic Background**: Stars and nebulae with mouse-reactive parallax
+- **Visual Effects**: Bloom, gravitational lensing (LensPass)
+- **PNG Export**: Download the complete universe without HUD
+- **Rate-Limit Handling**: Automatic fallback to mock data
+- **Reactive HUD**: Statistics and interactive controls
+
+## 🐛 Troubleshooting
+
+### GitHub Rate Limit
+
+If you reach the GitHub public API rate-limit (60 requests/hour per IP):
+- The application will display a warning banner
+- It will automatically use mock data for the demo
+- Wait an hour for the rate limit to reset, or try from a different network
+
+### WebGL Not Supported
+
+If your device doesn't support WebGL:
+- Advanced effects will be automatically disabled
+- The application will continue working with basic rendering
+
+## 📁 Project Structure
+
+```
+repoverse1/
+├── public/
+│   └── index.html          # Main HTML
+├── src/
+│   ├── main.js            # Entry point
+│   ├── app.js             # Main app logic
+│   ├── services/
+│   │   └── github.js      # GitHub API service
+│   ├── scene/
+│   │   ├── sceneManager.js    # Three.js scene manager
+│   │   ├── generators.js      # 3D object generators
+│   │   ├── background.js       # Dynamic background
+│   │   └── effects.js         # Post-processing effects
+│   ├── ui/
+│   │   ├── hud.js         # HUD overlay
+│   │   ├── home.js        # Home screen
+│   │   └── shareCard.js   # Information cards
+│   └── mock/
+│       └── mockData.json  # Mock data for demo
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+## 🛠️ Development
 
 ```bash
-flutter build web
+# Development
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview build
+npm run preview
 ```
 
-The output will be in `build/web/`.
+## 📝 Notes
 
-## Technologies Used
+- The project uses Three.js for 3D rendering
+- Vite as bundler and development server
+- No framework dependencies (vanilla JavaScript)
+- Compatible with modern browsers (Chrome, Firefox, Safari, Edge)
 
-- **Flutter** - UI framework
-- **Three.js** - 3D graphics library
-- **Dart** - Programming language
-- **GitHub API** - Repository data
-- **Bitbucket API** - Repository data
+## 📄 License
 
-## License
-
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]
+This project is part of RepoVerse.
