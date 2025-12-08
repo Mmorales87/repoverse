@@ -154,6 +154,11 @@ function transformRepository(githubRepo, owner = null) {
     description: githubRepo.description || '',
     source: 'github',
     isFork: githubRepo.fork || false,
+    parent: githubRepo.parent ? {
+      full_name: githubRepo.parent.full_name,
+      owner: githubRepo.parent.owner?.login,
+      name: githubRepo.parent.name
+    } : null,
     createdAt: githubRepo.created_at,
     updatedAt: githubRepo.updated_at,
     pushedAt: githubRepo.pushed_at,
@@ -166,7 +171,8 @@ function transformRepository(githubRepo, owner = null) {
     openIssues: githubRepo.open_issues_count || 0,
     daysSinceCreation: daysSinceCreation,
     hasRecentCommits: hasRecentCommits,
-    owner: owner || githubRepo.owner?.login || null
+    owner: owner || githubRepo.owner?.login || null,
+    prsToOriginal: 0
   };
 }
 
@@ -230,8 +236,8 @@ export async function fetchUserRepositories(username, options = {}) {
       const remaining = 60;
       const reset = Date.now() + 3600000;
       
-      const ownRepos = data.filter(repo => !repo.fork);
-      let repositories = ownRepos.map(repo => {
+      // Include all repos (both own and forks)
+      let repositories = data.map(repo => {
         if (repo.name && repo.stars !== undefined) {
           return repo;
         }
@@ -256,7 +262,13 @@ export async function fetchUserRepositories(username, options = {}) {
         return repo;
       });
       
-      const reposNeedingDetails = repositories.filter(repo => !cachedDetailed[repo.name]);
+      // Force refresh PRs data even if cached (to fix incorrect PR counts from old cache)
+      // Filter repos that need PR data refresh (either no cache or need PR update)
+      const reposNeedingDetails = repositories.filter(repo => {
+        const cached = cachedDetailed[repo.name];
+        // If no cache, needs details. If cached but has openPRs > 0, refresh to verify
+        return !cached || (cached.openPRs > 0);
+      });
       
       if (reposNeedingDetails.length > 0 && remaining > 20) {
         await fetchDetailedDataForRepos(reposNeedingDetails, username, remaining);
@@ -276,7 +288,7 @@ export async function fetchUserRepositories(username, options = {}) {
         return updated || repo;
       });
       
-      const allRepos = ownRepos.map(repo => {
+      const allRepos = data.map(repo => {
         if (repo.name && repo.stars !== undefined) {
           return repo;
         }
@@ -327,8 +339,8 @@ export async function fetchUserRepositories(username, options = {}) {
     
     RepositoryCache.setBasicRepos(username, data);
     
-    const ownRepos = data.filter(repo => !repo.fork);
-    let repositories = ownRepos.map(repo => transformRepository(repo, username));
+    // Include all repos (both own and forks)
+    let repositories = data.map(repo => transformRepository(repo, username));
     
     repositories = filterRepositories(repositories, filterMode, year);
     
@@ -348,7 +360,13 @@ export async function fetchUserRepositories(username, options = {}) {
       return repo;
     });
     
-    const reposNeedingDetails = repositories.filter(repo => !cachedDetailed[repo.name]);
+    // Force refresh PRs data even if cached (to fix incorrect PR counts from old cache)
+    // Filter repos that need PR data refresh (either no cache or need PR update)
+    const reposNeedingDetails = repositories.filter(repo => {
+      const cached = cachedDetailed[repo.name];
+      // If no cache, needs details. If cached but has openPRs > 0, refresh to verify
+      return !cached || (cached.openPRs > 0);
+    });
     
     if (reposNeedingDetails.length > 0 && remaining > 20) {
       await fetchDetailedDataForRepos(reposNeedingDetails, username, remaining);
@@ -368,7 +386,7 @@ export async function fetchUserRepositories(username, options = {}) {
       return updated || repo;
     });
     
-    let allRepositories = ownRepos.map(repo => transformRepository(repo, username));
+    let allRepositories = data.map(repo => transformRepository(repo, username));
     
     allRepositories = allRepositories.map(repo => {
       const cached = cachedDetailed[repo.name];
@@ -403,6 +421,42 @@ export async function fetchUserRepositories(username, options = {}) {
 }
 
 /**
+ * Fetch PRs from fork to original repository
+ * @param {string} forkOwner - Owner of the fork
+ * @param {string} forkName - Name of the fork
+ * @param {string} originalOwner - Owner of the original repository
+ * @param {string} originalName - Name of the original repository
+ * @param {string} defaultBranch - Default branch of the fork
+ * @returns {Promise<number>} - Count of open PRs from fork to original
+ */
+async function fetchPRsFromForkToOriginal(forkOwner, forkName, originalOwner, originalName, defaultBranch = 'main') {
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json'
+  };
+  
+  try {
+    // Search for PRs from fork to original
+    // Format: head={forkOwner}:{branch} base={defaultBranch}
+    const url = `${GITHUB_API_BASE}/repos/${originalOwner}/${originalName}/pulls?head=${forkOwner}:${defaultBranch}&state=open&per_page=100`;
+    const response = await fetch(url, { headers });
+    
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 403) {
+        return 0;
+      }
+      console.warn(`[GITHUB] Could not fetch PRs from fork ${forkOwner}/${forkName} to ${originalOwner}/${originalName}: ${response.status}`);
+      return 0;
+    }
+    
+    const prs = await response.json();
+    return Array.isArray(prs) ? prs.length : 0;
+  } catch (error) {
+    console.warn(`[GITHUB] Error fetching PRs from fork ${forkOwner}/${forkName} to ${originalOwner}/${originalName}:`, error);
+    return 0;
+  }
+}
+
+/**
  * Fetch detailed data for a list of repositories
  * Optimized batching with Promise.allSettled
  */
@@ -431,21 +485,42 @@ async function fetchDetailedDataForRepos(repos, username, initialRemaining) {
     
     const promises = batch.map(async (repo) => {
       try {
-        const [commitCount, branchCount, issuesResponse] = await Promise.all([
+        const fetchPromises = [
           fetchRealCommitCount(repo.owner || username, repo.name),
           fetchRealBranchCount(repo.owner || username, repo.name),
           fetch(`${GITHUB_API_BASE}/repos/${repo.owner || username}/${repo.name}/issues?state=open&per_page=100`, { headers: apiHeaders })
-        ]);
+        ];
         
-        repo.totalCommits = commitCount;
-        repo.branchesCount = branchCount;
+        // If repo is a fork with parent, also fetch PRs to original
+        if (repo.isFork && repo.parent) {
+          fetchPromises.push(
+            fetchPRsFromForkToOriginal(
+              repo.owner || username,
+              repo.name,
+              repo.parent.owner,
+              repo.parent.name,
+              repo.defaultBranch || 'main'
+            )
+          );
+        }
         
-        if (issuesResponse.ok) {
-          const issuesData = await issuesResponse.json();
-          const prs = issuesData.filter(item => item.pull_request);
+        const results = await Promise.all(fetchPromises);
+        
+        repo.totalCommits = results[0];
+        repo.branchesCount = results[1];
+        
+        if (results[2].ok) {
+          const issuesData = await results[2].json();
+          // Only count PRs that are actually open (exclude closed/merged)
+          const prs = issuesData.filter(item => item.pull_request && item.state === 'open');
           const realIssues = issuesData.filter(item => !item.pull_request);
           repo.openPRs = prs.length;
           repo.openIssues = realIssues.length;
+        }
+        
+        // Set PRs to original if fork
+        if (repo.isFork && repo.parent && results.length > 3) {
+          repo.prsToOriginal = results[3] || 0;
         }
         
         return { status: 'fulfilled', repo };
@@ -457,7 +532,10 @@ async function fetchDetailedDataForRepos(repos, username, initialRemaining) {
     
     await Promise.allSettled(promises);
     
-    currentRemaining -= batch.length * 3;
+    // Calculate rate limit usage: 3 requests per repo (commits, branches, issues)
+    // + 1 additional request per fork (PRs to original)
+    const forkCount = batch.filter(r => r.isFork && r.parent).length;
+    currentRemaining -= (batch.length * 3) + forkCount;
     
     if (batchIndex < batches.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 200));

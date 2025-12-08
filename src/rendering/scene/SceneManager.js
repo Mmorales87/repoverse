@@ -7,6 +7,8 @@ import {
   generatePRs,
   generateComets,
   generateDecorativeRocket,
+  generateISS,
+  generateAstronaut,
   calculateOrbitalRadius,
   calculateOrbitalPosition,
   calculateOrbitalSpeed,
@@ -45,6 +47,11 @@ export class SceneManager {
     this.comets = [];
     this.orbitLines = [];
     this.planetAnimations = [];
+    
+    // Forks and astronauts
+    this.forks = []; // Array of fork groups (planet + ISS)
+    this.astronauts = []; // Array of astronauts connecting forks to originals
+    this.forkToOriginalMap = new Map(); // Map<forkFullName, originalPlanet>
     
     // Decorative rockets (independent of repositories)
     this.decorativeRockets = [];
@@ -159,11 +166,18 @@ export class SceneManager {
     // Get sun size for collision avoidance
     const sunSize = this.sun.children[0]?.geometry?.parameters?.radius || calculateSunSize(sumStars);
     
+    // Separate own repos from forks
+    const ownRepos = repositories.filter(repo => !repo.isFork);
+    const forks = repositories.filter(repo => repo.isFork).slice(0, 20); // Limit to 20 forks
+    
     // Calculate max commits for normalization
     const maxCommitsLast30 = Math.max(...repositories.map(r => r.commitsLast30 || 0), 1);
     
-    // Generate planets, branches, PRs, comets
-    repositories.forEach((repo, index) => {
+    // Track max orbital radius for forks shared orbit
+    let maxOrbitalRadius = 0;
+    
+    // Generate own planets, branches, PRs, comets
+    ownRepos.forEach((repo, index) => {
       // Get daysSinceCreationAtSnapshot (calculated in app.js)
       const daysSinceCreationAtSnapshot = repo.daysSinceCreationAtSnapshot || repo.daysSinceCreation || 0;
       
@@ -246,6 +260,9 @@ export class SceneManager {
         }
       });
       
+      // Track max orbital radius for forks shared orbit
+      maxOrbitalRadius = Math.max(maxOrbitalRadius, orbitalRadius);
+      
       // Generate orbit line (thin, almost transparent)
       // Note: Orbit lines are NOT added to the main scene - they'll be rendered separately
       // to avoid being affected by LensPass distortion
@@ -253,6 +270,121 @@ export class SceneManager {
       this.orbitLines.push(orbitLine);
       // Don't add to scene - EffectsManager will handle rendering them separately
     });
+    
+    // Create map of original repos by full_name for fork lookup
+    const originalReposMap = new Map();
+    ownRepos.forEach((repo, index) => {
+      const fullName = `${repo.owner || ''}/${repo.name}`;
+      if (this.planets[index]) {
+        originalReposMap.set(fullName, {
+          planet: this.planets[index],
+          repo: repo
+        });
+      }
+    });
+    
+    // Generate forks in shared orbit
+    if (forks.length > 0) {
+      const sharedOrbitRadius = maxOrbitalRadius + 50;
+      
+      forks.forEach((forkRepo, forkIndex) => {
+        // Generate fork planet
+        const forkPlanet = generatePlanet(forkRepo, ownRepos.length + forkIndex);
+        const forkPlanetRadius = forkPlanet.children[0].userData.radius;
+        
+        // Distribute forks uniformly in shared orbit
+        const angle = (forkIndex / forks.length) * Math.PI * 2;
+        const position = calculateOrbitalPosition(forkIndex, angle, sharedOrbitRadius);
+        
+        forkPlanet.position.copy(position);
+        this.planets.push(forkPlanet);
+        this.addObject(forkPlanet);
+        
+        // Generate ISS for fork
+        const iss = generateISS(forkPlanetRadius);
+        iss.position.copy(position);
+        this.forks.push({
+          planet: forkPlanet,
+          iss: iss,
+          repo: forkRepo
+        });
+        this.addObject(iss);
+        
+        // Store fork to original mapping and generate astronaut if there are PRs
+        if (forkRepo.parent) {
+          const parentFullName = forkRepo.parent.full_name;
+          const originalData = originalReposMap.get(parentFullName);
+          if (originalData) {
+            this.forkToOriginalMap.set(`${forkRepo.owner}/${forkRepo.name}`, originalData);
+            
+            // Generate astronaut if fork has PRs to original
+            if (forkRepo.prsToOriginal > 0) {
+              const astronaut = generateAstronaut(
+                forkPlanet,
+                originalData.planet,
+                forkRepo,
+                originalData.repo
+              );
+              this.astronauts.push(astronaut);
+              this.addObject(astronaut);
+            }
+          }
+        }
+        
+        // Generate branches for fork (pass isFork=true to keep branches further from ISS)
+        const forkBranches = generateBranches(forkRepo, forkPlanetRadius, true);
+        this.branches.push(forkBranches);
+        forkBranches.forEach(branch => {
+          branch.position.copy(position);
+          this.addObject(branch);
+        });
+        
+        // Generate PRs for fork
+        const forkPRs = generatePRs(forkRepo, forkPlanetRadius, forkBranches.length);
+        this.prs.push(forkPRs);
+        forkPRs.forEach(pr => {
+          pr.position.copy(position);
+          this.addObject(pr);
+        });
+        
+        // Generate comets for fork
+        const forkComets = generateComets(forkRepo, forkPlanetRadius, sharedOrbitRadius);
+        this.comets.push(forkComets);
+        forkComets.forEach(comet => {
+          comet.position.copy(position);
+          this.addObject(comet);
+        });
+        
+        // Store animation data for fork
+        const commitsLast30 = forkRepo.commitsLast30 || 0;
+        const orbitalSpeed = calculateOrbitalSpeed(commitsLast30, maxCommitsLast30);
+        const normalizedRecent = clamp(
+          log10(commitsLast30) / log10(maxCommitsLast30 + 1),
+          0,
+          1
+        );
+        const spinSpeed = 0.001 + normalizedRecent * 0.02;
+        const eccentricity = Math.random() * 0.05;
+        
+        this.planetAnimations.push({
+          initialAngle: angle,
+          orbitalRadius: sharedOrbitRadius,
+          orbitalSpeed: orbitalSpeed,
+          spinSpeed: spinSpeed,
+          eccentricity: eccentricity,
+          inclination: 0,
+          rotationSpeed: {
+            x: 0.2 + Math.random() * 0.3,
+            y: 0.1 + Math.random() * 0.2,
+            z: 0.15 + Math.random() * 0.25
+          }
+        });
+        
+        // Generate orbit line for fork
+        const forkOrbitLine = generateOrbitLine(sharedOrbitRadius, eccentricity, 0);
+        this.orbitLines.push(forkOrbitLine);
+      });
+    }
     
     // Update top-K planets
     this.updateTopKPlanets();
@@ -327,6 +459,11 @@ export class SceneManager {
     this.orbitLines = [];
     this.planetAnimations = [];
     this.topKPlanets = [];
+    
+    // Clear forks and astronauts
+    this.forks = [];
+    this.astronauts = [];
+    this.forkToOriginalMap.clear();
     
     // Clear decorative rockets
     this.decorativeRockets = [];
@@ -529,6 +666,97 @@ export class SceneManager {
           return true; // Keep in array
         });
       }
+    });
+    
+    // Animate ISS (orbit around fork planets)
+    this.forks.forEach((forkData) => {
+      const { planet, iss } = forkData;
+      if (!planet || !iss) return;
+      
+      const issData = iss.userData;
+      if (!issData || issData.type !== 'iss') return;
+      
+      // Get planet position
+      const planetPosition = new THREE.Vector3();
+      planet.getWorldPosition(planetPosition);
+      
+      // Calculate ISS orbit around planet
+      const issAngle = issData.initialAngle + elapsedTime * issData.orbitSpeed;
+      const issOrbitRadius = issData.orbitRadius;
+      
+      // ISS orbits in horizontal plane around the planet
+      const issX = planetPosition.x + issOrbitRadius * Math.cos(issAngle);
+      const issY = planetPosition.y; // Same height as planet
+      const issZ = planetPosition.z + issOrbitRadius * Math.sin(issAngle);
+      
+      iss.position.set(issX, issY, issZ);
+      
+      // Rotate ISS slowly
+      iss.rotation.y += 0.01 * deltaTime;
+    });
+    
+    // Animate astronauts (elliptical trajectory between fork and original)
+    this.astronauts.forEach((astronaut) => {
+      const astronautData = astronaut.userData;
+      if (!astronautData || astronautData.type !== 'astronaut') return;
+      
+      const { forkPlanet, originalPlanet } = astronautData;
+      if (!forkPlanet || !originalPlanet) return;
+      
+      // Update planet positions
+      const forkPosition = new THREE.Vector3();
+      const originalPosition = new THREE.Vector3();
+      forkPlanet.getWorldPosition(forkPosition);
+      originalPlanet.getWorldPosition(originalPosition);
+      
+      // Update stored positions
+      astronautData.forkPosition.copy(forkPosition);
+      astronautData.originalPosition.copy(originalPosition);
+      
+      // Calculate midpoint and distance
+      const midpoint = new THREE.Vector3().addVectors(forkPosition, originalPosition).multiplyScalar(0.5);
+      astronautData.midpoint.copy(midpoint);
+      astronautData.distance = forkPosition.distanceTo(originalPosition);
+      
+      // Calculate elliptical trajectory angle
+      astronautData.currentAngle += astronautData.orbitSpeed * deltaTime;
+      if (astronautData.currentAngle >= Math.PI * 2) {
+        astronautData.currentAngle -= Math.PI * 2;
+      }
+      
+      // Elliptical path between fork and original
+      const t = (astronautData.currentAngle / (Math.PI * 2)) * 2 - 1; // -1 to 1
+      const ellipticalT = t + astronautData.eccentricity * Math.sin(t * Math.PI);
+      const normalizedT = (ellipticalT + 1) / 2; // 0 to 1
+      
+      // Interpolate position along path
+      const astronautPos = new THREE.Vector3().lerpVectors(
+        forkPosition,
+        originalPosition,
+        normalizedT
+      );
+      
+      // Add slight vertical offset for 3D effect
+      const verticalOffset = Math.sin(astronautData.currentAngle) * astronautData.distance * 0.1;
+      astronautPos.y += verticalOffset;
+      
+      astronaut.position.copy(astronautPos);
+      
+      // Rotate astronaut to face direction of travel
+      const nextAngle = astronautData.currentAngle + 0.1;
+      const nextT = (nextAngle / (Math.PI * 2)) * 2 - 1;
+      const nextEllipticalT = nextT + astronautData.eccentricity * Math.sin(nextT * Math.PI);
+      const nextNormalizedT = (nextEllipticalT + 1) / 2;
+      const nextPos = new THREE.Vector3().lerpVectors(forkPosition, originalPosition, nextNormalizedT);
+      nextPos.y += Math.sin(nextAngle) * astronautData.distance * 0.1;
+      
+      const direction = new THREE.Vector3().subVectors(nextPos, astronautPos).normalize();
+      if (direction.length() > 0) {
+        astronaut.lookAt(astronautPos.clone().add(direction));
+      }
+      
+      // Rotate astronaut body slightly
+      astronaut.rotation.y += 0.02 * deltaTime;
     });
     
     // ✅ GENERAR COHETES DECORATIVOS PERIÓDICAMENTE (independientes de repos)

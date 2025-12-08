@@ -45,7 +45,8 @@ If you reach the rate limit, the application will automatically fall back to moc
 | Main language      | Color / material    | Quick differentiation                 |
 | Recent activity    | Orbital speed       | Dynamism / rhythm                     |
 | Age                | Orbital radius      | Spatial timeline                      |
-| Forks             | Moons               | 🚧 Planned for future updates |
+| Forks             | Planets with ISS (orbital station) | Forks appear as planets in shared orbit, each with an ISS orbiting around it |
+| PRs from fork to original | Astronaut | Astronauts move in elliptical trajectory connecting fork to original repository |
 | Releases          | Rings or capsules   | 🚧 Planned for future updates |
 | Issues             | Storms / spots       | 🚧 Planned for future updates |
 | Watchers           | Halo / glow         | 🚧 Planned for future updates |
