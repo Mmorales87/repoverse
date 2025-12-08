@@ -2,10 +2,11 @@
  * Year Selector - Timeline slider for historical snapshots
  */
 export class YearSelector {
-  constructor(container, onYearChange, onAgeMappingChange) {
+  constructor(container, onYearChange, onAgeMappingChange, app = null) {
     this.container = container;
     this.onYearChange = onYearChange;
     this.onAgeMappingChange = onAgeMappingChange;
+    this.app = app; // Reference to App for pause/resume functionality
     this.elements = {};
     this.minYear = 2020;
     this.maxYear = new Date().getFullYear();
@@ -44,16 +45,78 @@ export class YearSelector {
       pointer-events: auto;
     `;
     
+    // Row container for label and play/pause button
+    const labelButtonRow = document.createElement('div');
+    labelButtonRow.style.cssText = `
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    `;
+    
     // Year label
     const yearLabel = document.createElement('div');
     yearLabel.id = 'year-selector-label';
     yearLabel.style.cssText = `
-      text-align: center;
+      text-align: start;
       font-size: 18px;
       font-weight: bold;
       color: white;
+      flex: 1;
     `;
     yearLabel.textContent = `Year: ${this.currentYear}`;
+    labelButtonRow.appendChild(yearLabel);
+    
+    // Play/Pause button
+    const playPauseBtn = document.createElement('button');
+    playPauseBtn.id = 'year-selector-play-pause';
+    playPauseBtn.textContent = '⏸ Pause';
+    playPauseBtn.style.cssText = `
+      padding: 2px 10px;
+      background: rgba(244, 67, 54, 0.8);
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    `;
+    playPauseBtn.onmouseover = () => {
+      if (!this.app?.isPaused) {
+        playPauseBtn.style.background = 'rgba(244, 67, 54, 1)';
+      } else {
+        playPauseBtn.style.background = 'rgba(76, 175, 80, 1)';
+      }
+    };
+    playPauseBtn.onmouseout = () => {
+      if (!this.app?.isPaused) {
+        playPauseBtn.style.background = 'rgba(244, 67, 54, 0.8)';
+      } else {
+        playPauseBtn.style.background = 'rgba(76, 175, 80, 0.8)';
+      }
+    };
+    playPauseBtn.onclick = () => {
+      if (this.app) {
+        if (this.app.isPaused) {
+          this.app.resumeAnimations();
+          playPauseBtn.textContent = '⏸ Pause';
+          playPauseBtn.style.background = 'rgba(244, 67, 54, 0.8)';
+        } else {
+          this.app.pauseAnimations();
+          playPauseBtn.textContent = '▶ Play';
+          playPauseBtn.style.background = 'rgba(76, 175, 80, 0.8)';
+        }
+      }
+    };
+    labelButtonRow.appendChild(playPauseBtn);
+    
+    // Store button reference
+    this.elements.playPauseBtn = playPauseBtn;
+    
+    // Append the row container to selector
+    selector.appendChild(labelButtonRow);
     
     // Slider
     const slider = document.createElement('input');
@@ -137,7 +200,7 @@ export class YearSelector {
     controlsRow.appendChild(playBtn);
     controlsRow.appendChild(mappingLabel); */
     
-    selector.appendChild(yearLabel);
+    // yearLabel and playPauseBtn already appended above (lines 58 and 103)
     selector.appendChild(slider);
     selector.appendChild(controlsRow);
     

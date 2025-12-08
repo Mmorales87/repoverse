@@ -41,6 +41,7 @@ export class App {
     this.allRepositories = [];
     this.filterMode = 'active'; // Default: show only active repos
     this.totalSumStars = 0; // Total stars from all repos (for consistent sun size)
+    this.isPaused = false; // Animation pause state
     
     // Managers
     this.repositoryFilterManager = new RepositoryFilterManager();
@@ -145,7 +146,8 @@ export class App {
         (ageMapping) => {
           this.ageMapping = ageMapping;
           this.updateUniverseSnapshot();
-        }
+        },
+        this // Pass app reference for pause/resume functionality
       );
       this.yearSelector.initialize();
     } catch (error) {
@@ -474,29 +476,49 @@ export class App {
         const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
         lastTime = currentTime;
         
-        if (this.backgroundManager) {
-          this.backgroundManager.update();
-        }
-
-        if (this.backgroundRenderer) {
-          this.backgroundRenderer.update(deltaTime);
-        }
-
-        if (this.sceneRenderer) {
-          this.sceneRenderer.update();
-
-          const { positions, masses, count } = this.sceneRenderer.getTopKPlanetPositions();
-
-          if (this.backgroundRenderer && typeof this.backgroundRenderer.updatePlanets === 'function') {
-            try {
-              this.backgroundRenderer.updatePlanets(positions, masses, count);
-            } catch (galaxyError) {
-              // Galaxy is optional
-            }
+        // Only update animations if not paused
+        if (!this.isPaused) {
+          if (this.backgroundManager) {
+            this.backgroundManager.update();
           }
 
-          if (this.effectsManager) {
-            this.effectsManager.updateLensPass(positions, masses, count);
+          if (this.backgroundRenderer) {
+            this.backgroundRenderer.update(deltaTime);
+          }
+
+          if (this.sceneRenderer) {
+            this.sceneRenderer.update();
+
+            const { positions, masses, count } = this.sceneRenderer.getTopKPlanetPositions();
+
+            if (this.backgroundRenderer && typeof this.backgroundRenderer.updatePlanets === 'function') {
+              try {
+                this.backgroundRenderer.updatePlanets(positions, masses, count);
+              } catch (galaxyError) {
+                // Galaxy is optional
+              }
+            }
+
+            if (this.effectsManager) {
+              this.effectsManager.updateLensPass(positions, masses, count);
+            }
+          }
+        } else {
+          // When paused, still get planet positions for effects (but don't update animations)
+          if (this.sceneRenderer) {
+            const { positions, masses, count } = this.sceneRenderer.getTopKPlanetPositions();
+            
+            if (this.backgroundRenderer && typeof this.backgroundRenderer.updatePlanets === 'function') {
+              try {
+                this.backgroundRenderer.updatePlanets(positions, masses, count);
+              } catch (galaxyError) {
+                // Galaxy is optional
+              }
+            }
+
+            if (this.effectsManager) {
+              this.effectsManager.updateLensPass(positions, masses, count);
+            }
           }
         }
 
@@ -517,6 +539,26 @@ export class App {
     };
 
     animate();
+  }
+
+  /**
+   * Pause all animations
+   */
+  pauseAnimations() {
+    this.isPaused = true;
+    if (this.sceneRenderer) {
+      this.sceneRenderer.pause();
+    }
+  }
+
+  /**
+   * Resume all animations
+   */
+  resumeAnimations() {
+    this.isPaused = false;
+    if (this.sceneRenderer) {
+      this.sceneRenderer.resume();
+    }
   }
 
   /**
