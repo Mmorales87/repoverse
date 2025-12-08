@@ -53,7 +53,7 @@ export class YearSelector {
       font-weight: bold;
       color: white;
     `;
-    yearLabel.textContent = `Año: ${this.currentYear}`;
+    yearLabel.textContent = `Year: ${this.currentYear}`;
     
     // Slider
     const slider = document.createElement('input');
@@ -71,7 +71,7 @@ export class YearSelector {
     slider.addEventListener('input', (e) => {
       const year = parseInt(e.target.value);
       this.currentYear = year;
-      yearLabel.textContent = `Año: ${year}`;
+      yearLabel.textContent = `Year: ${year}`;
       
       // Calculate snapshot date (end of selected year)
       const snapshotDate = new Date(year, 11, 31, 23, 59, 59);
@@ -129,7 +129,7 @@ export class YearSelector {
     });
     
     const mappingText = document.createElement('span');
-    mappingText.textContent = 'Invertir mapping (antiguos más cerca)';
+    mappingText.textContent = 'Invert mapping (older closer)';
     
 /*     mappingLabel.appendChild(mappingCheckbox);
     mappingLabel.appendChild(mappingText);
@@ -174,7 +174,7 @@ export class YearSelector {
       this.elements.slider.value = year;
     }
     if (this.elements.label) {
-      this.elements.label.textContent = `Año: ${year}`;
+      this.elements.label.textContent = `Year: ${year}`;
     }
   }
 
