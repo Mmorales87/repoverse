@@ -648,7 +648,7 @@ export class SceneManager {
   createSkybox() {
     const loader = new THREE.TextureLoader();
     loader.load(
-      '/textures/2k_stars.jpg',
+      `${import.meta.env.BASE_URL}textures/2k_stars.jpg`,
       (texture) => {
         // Hide GalaxyRenderer canvas so skybox is visible
         const galaxyCanvas = document.getElementById('galaxy-canvas');

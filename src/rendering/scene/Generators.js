@@ -199,7 +199,7 @@ export function generateSun(userData = {}, sumStars = 0) {
   let sunTexture = null;
   
   try {
-    sunTexture = textureLoader.load('/textures/8k_sun.jpg', 
+    sunTexture = textureLoader.load(`${import.meta.env.BASE_URL}textures/8k_sun.jpg`, 
       (texture) => {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
@@ -208,7 +208,7 @@ export function generateSun(userData = {}, sumStars = 0) {
       undefined,
       (error) => {
         console.warn('[GENERATORS] 8K sun texture failed, trying 2K:', error);
-        textureLoader.load('/textures/2k_sun.jpg',
+        textureLoader.load(`${import.meta.env.BASE_URL}textures/2k_sun.jpg`,
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
@@ -292,7 +292,7 @@ export function generatePlanet(repo, index) {
   const color = getLanguageColor(language);
   
   const textureIndex = (hashString(repo.name) % 8) + 1;
-  const texturePath = `/textures/2k_planet${textureIndex}.jpg`;
+  const texturePath = `${import.meta.env.BASE_URL}textures/2k_planet${textureIndex}.jpg`;
   
   const textureLoader = new THREE.TextureLoader();
   
@@ -352,7 +352,7 @@ export function generateBranches(repo, planetRadius) {
   
   let moonTexture = null;
   textureLoader.load(
-    '/textures/2k_moon.jpg',
+    `${import.meta.env.BASE_URL}textures/2k_moon.jpg`,
     (texture) => {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -441,7 +441,7 @@ export function generatePRs(repo, planetRadius, numBranches) {
     
     loadPromise = new Promise((resolve, reject) => {
       loader.load(
-        '/models/PR-Rocket.glb',
+        `${import.meta.env.BASE_URL}models/PR-Rocket.glb`,
         (gltf) => {
           modelCache = gltf.scene;
           resolve(gltf);
@@ -531,7 +531,7 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
   const cometSize = 2.9;
   
   loader.load(
-    '/models/comets.glb',
+    `${import.meta.env.BASE_URL}models/comets.glb`,
     (gltf) => {
       const rocketModel = gltf.scene;
       
@@ -607,7 +607,7 @@ export function generateDecorativeRocket() {
   const rocketSize = 2.2;
   
   loader.load(
-    '/models/Rocket-Across.glb',
+    `${import.meta.env.BASE_URL}models/Rocket-Across.glb`,
     (gltf) => {
       const rocketModel = gltf.scene;
       const box = new THREE.Box3().setFromObject(rocketModel);

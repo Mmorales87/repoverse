@@ -237,7 +237,7 @@ export class HomeScreen {
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: '/json/loading_rocket.json'
+        path: `${import.meta.env.BASE_URL}json/loading_rocket.json`
       });
     } else if (this.lottieAnimation) {
       // Resume animation if it already exists
