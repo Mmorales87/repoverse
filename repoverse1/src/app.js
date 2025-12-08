@@ -301,20 +301,14 @@ export class App {
         repositories = mockData.repositories;
       } else {
         try {
-          // Use token if available (for development only)
-          // In production, this will be false or token won't be set
-          const useToken = !!import.meta.env.VITE_GITHUB_TOKEN;
-          
-          // Get current filter mode and year to apply filter BEFORE API requests
           const currentYear = this.snapshotDate.getFullYear();
           const currentFilterMode = this.filterMode || 'active';
           
-          // Pass filter options to fetchUserRepositories so it filters BEFORE detailed requests
-          fetchResult = await fetchUserRepositories(username, useToken, {
+          fetchResult = await fetchUserRepositories(username, {
             filterMode: currentFilterMode,
             year: currentYear
           });
-          repositories = fetchResult.repositories; // Filtered repos with details
+          repositories = fetchResult.repositories;
           rateLimit = fetchResult.rateLimit;
 
           if (isRateLimitExceeded(rateLimit)) {
@@ -342,47 +336,32 @@ export class App {
         }
       }
 
-      // Enrich repositories with lastCommitYear (cache once on load)
       const enrichedRepositories = this.repositoryFilterManager.enrichReposWithLastCommitYear(repositories);
-      
-      // Calculate stats from filtered repos
       const stats = this.calculateStats(enrichedRepositories);
       
-      // For filter switching, we need all repos
-      // If fetchResult has allRepositories, use those; otherwise use filtered repos
-      // (This happens when cache is used - we'll have all repos there)
       let allReposForFiltering = repositories;
       if (fetchResult && fetchResult.allRepositories) {
         allReposForFiltering = fetchResult.allRepositories;
       }
       
-      // Store ALL repositories (unfiltered) for filter switching
-      // Enrich all repos too
       const allReposEnriched = this.repositoryFilterManager.enrichReposWithLastCommitYear(allReposForFiltering);
       this.allRepositories = allReposEnriched;
       
-      // Calculate total stars from ALL repos (for consistent sun size across years/filters)
       this.totalSumStars = allReposEnriched.reduce((sum, repo) => sum + (repo.stars || 0), 0);
       
-      // Calculate account creation year for year selector
       const accountCreationYear = this.calculateAccountCreationYear(repositories);
       if (this.yearSelector) {
         this.yearSelector.setYearRange(accountCreationYear, new Date().getFullYear());
         this.yearSelector.setCurrentYear(new Date().getFullYear());
       }
 
-      // Generate universe with current snapshot
       this.updateUniverseSnapshot();
 
-      // HUD is already updated in updateUniverseSnapshot() with filtered stats
-      // No need to update again with all repos stats
-
-      // Hide home screen
       this.homeScreen?.hide();
       this.homeScreen?.hideLoading();
     } catch (error) {
       ErrorHandler.handleRuntimeError(error, Logger.PREFIXES.APP, 'generateUniverse');
-      this.homeScreen?.showError('Error al generar el universo');
+      this.homeScreen?.showError('Error generating universe');
       this.homeScreen?.hideLoading();
     }
   }
@@ -392,7 +371,6 @@ export class App {
    */
   calculateStats(repositories) {
     const totalRepos = repositories.length;
-    // Sum commits correctly (not size!)
     const totalCommits = repositories.reduce((sum, repo) => {
       return sum + (repo.totalCommits || 0);
     }, 0);
@@ -412,7 +390,7 @@ export class App {
    */
   calculateAccountCreationYear(repositories) {
     if (!repositories || repositories.length === 0) {
-      return new Date().getFullYear() - 5; // Default to 5 years ago
+      return new Date().getFullYear() - 5;
     }
     
     let earliestYear = new Date().getFullYear();
@@ -434,17 +412,14 @@ export class App {
   updateUniverseSnapshot() {
     if (!this.allRepositories || !this.sceneRenderer) return;
     
-    // Get selected year from snapshot date
     const selectedYear = this.snapshotDate.getFullYear();
     
-    // Apply filter based on mode (active or all)
     const filteredRepos = this.repositoryFilterManager.filterRepositories(
       this.allRepositories,
       selectedYear,
       this.filterMode
     );
     
-    // Calculate daysSinceCreationAtSnapshot for each repo
     const reposWithSnapshotAge = filteredRepos.map(repo => {
       const repoDate = new Date(repo.createdAt);
       const daysSinceCreationAtSnapshot = Math.floor(
@@ -457,19 +432,14 @@ export class App {
       };
     });
     
-    // Calculate stats from FILTERED repos (what's actually visible on screen)
     const filteredStats = this.calculateStats(reposWithSnapshotAge);
     
-    // Update HUD with filtered stats (reactive to year and filter mode)
     if (this.hudManager && this.currentUsername) {
       this.hudManager.updateUserData(this.currentUsername, filteredStats);
     }
     
-    // Use total stars from ALL repos (not filtered) for consistent sun size
-    // This ensures the sun size remains constant regardless of year or filter mode
     const sumStars = this.totalSumStars;
     
-    // Generate universe with filtered snapshot data
     this.sceneRenderer.generateUniverse(reposWithSnapshotAge, {
       username: this.currentUsername,
       snapshotDate: this.snapshotDate,
@@ -500,51 +470,41 @@ export class App {
       frameCount++;
 
       try {
-        // Calculate delta time manually (don't interfere with SceneManager's clock)
         const currentTime = performance.now();
-        const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1); // Cap at 100ms
+        const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
         lastTime = currentTime;
         
-        // Update background
         if (this.backgroundManager) {
           this.backgroundManager.update();
         }
 
-        // Update background renderer
         if (this.backgroundRenderer) {
           this.backgroundRenderer.update(deltaTime);
         }
 
-        // Update scene (this includes planet rotations, orbits, etc.)
-        // SceneManager.update() uses its own clock.getDelta() internally
         if (this.sceneRenderer) {
           this.sceneRenderer.update();
 
-          // Get planet positions once for both Galaxy and LensPass
           const { positions, masses, count } = this.sceneRenderer.getTopKPlanetPositions();
 
-          // Update Galaxy with planet positions (only if Galaxy is working)
           if (this.backgroundRenderer && typeof this.backgroundRenderer.updatePlanets === 'function') {
             try {
               this.backgroundRenderer.updatePlanets(positions, masses, count);
             } catch (galaxyError) {
-              // Silently fail - Galaxy is optional
+              // Galaxy is optional
             }
           }
 
-          // Update lens pass with planet positions
           if (this.effectsManager) {
             this.effectsManager.updateLensPass(positions, masses, count);
           }
         }
 
-        // Update orbit lines in effects manager (so they render after LensPass)
         if (this.effectsManager && this.sceneRenderer) {
           const orbitLines = this.sceneRenderer.orbitLines || [];
           this.effectsManager.setOrbitLines(orbitLines);
         }
         
-        // Render with effects
         if (this.effectsManager && this.effectsManager.composer) {
           this.effectsManager.render();
         } else if (this.sceneRenderer && this.sceneRenderer.renderer) {
@@ -591,4 +551,3 @@ export class App {
     this.filterToggleUI?.dispose();
   }
 }
-

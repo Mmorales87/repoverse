@@ -19,27 +19,11 @@ The application will be available at `http://localhost:5173`
 - Node.js 16+ 
 - npm or yarn
 
-## 🔑 Tokens and Authentication
+## 🔑 GitHub API
 
-**IMPORTANT**: By default, the project uses the public GitHub API **without tokens**. No tokens are required to use the application.
+**No authentication required!** This project uses the public GitHub API without tokens, just like [GithubCity](https://github.com/unixzii/GithubCity). The rate limit is **60 requests/hour per IP address**, which is sufficient for most use cases.
 
-### Optional Token
-
-If you want to use an optional token (to increase rate-limit or access private repos):
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Add your token in `.env`:
-   ```
-   VITE_GITHUB_TOKEN=your_token_here
-   ```
-
-3. Enable the token manually in the UI (future feature).
-
-**Note**: To view private repositories, a backend with OAuth is required - this is not included in this version.
+If you reach the rate limit, the application will automatically fall back to mock data for demonstration purposes.
 
 ## 🎮 Usage
 
@@ -52,44 +36,33 @@ If you want to use an optional token (to increase rate-limit or access private r
 
 | Element           | Represents           | Visual Function                       |
 |-------------------|---------------------|--------------------------------------|
-| Sun               | User / organization | System center, global influence, glow/halo; can radiate particles or energy pulse |
+| Sun               | User / organization | System center, global influence, particles; can radiate particles or energy pulse |
 | Repo              | Planet              | Central unit, interaction point      |
-| Total commits     | Size / mass         | Evolution and global activity        |
-| Forks             | Moons               | Popularity / diffusion               |
-| Branches          | Rings               | Internal complexity                  |
-| Releases          | Rings or capsules   | Important milestones                 |
-| PRs               | Satellites          | Changes under review                 |
-| Issues             | Storms / spots       | Pending problems                      |
-| Watchers           | Halo / glow         | Attention / popularity                |
-| Contributors       | Particles / moons   | Community and collaboration          |
+| Size (KB)         | Planet radius / mass | Repository size determines planet size |
+| Branches          | Orbital spheres     | Internal complexity (orbital spheres around planet) |
+| PRs               | GLTF rockets (satellites) | Changes under review (orbital rockets) |
+| Comets            | Recent commits (24-48h) | Rockets crossing system for recent activity |
 | Main language      | Color / material    | Quick differentiation                 |
-| Recent activity    | Speed / pulse       | Dynamism / rhythm                     |
+| Recent activity    | Orbital speed       | Dynamism / rhythm                     |
 | Age                | Orbital radius      | Spatial timeline                      |
+| Forks             | Moons               | 🚧 Planned for future updates |
+| Releases          | Rings or capsules   | 🚧 Planned for future updates |
+| Issues             | Storms / spots       | 🚧 Planned for future updates |
+| Watchers           | Halo / glow         | 🚧 Planned for future updates |
+| Contributors       | Particles / moons   | 🚧 Planned for future updates |
 
 ## 🔢 Visual Mapping Formulas
 
 ### Planet Radius
 ```
-radius = clamp(log10(totalCommits + 1) * 8.0, 1.6, 18.0)
+radius = clamp(log10(size) * 1.5, 1.6, 18.0)
 ```
-The planet size represents the total number of commits.
-
-### Halo Intensity
-```
-haloIntensity = clamp(log10(stars + 1) * 0.6, 0.1, 3.0)
-```
-The halo brightness represents popularity (stars).
-
-### Number of Moons
-```
-numMoons = min(round(log2(forks + 1)), 8)
-```
-Each moon represents repository forks.
+The planet size represents the repository size in KB (not total commits).
 
 ### Orbital Speed
 ```
 normalizedRecent = clamp(log10(commitsLast30 + 1) / log10(maxCommitsLast30 + 1), 0, 1)
-orbitalSpeed = 0.0005 + normalizedRecent * 0.003
+orbitalSpeed = 0.005 + normalizedRecent * 0.005
 ```
 The orbital speed represents recent activity.
 
@@ -97,31 +70,36 @@ The orbital speed represents recent activity.
 ```
 baseRadius = 30
 ageFactor = 0.5
-orbitalRadius = baseRadius + ageFactor * sqrt(daysSinceCreation)
+orbitalRadius = baseRadius + ageFactor * sqrt(daysSinceCreationAtSnapshot)
 ```
 The distance from the sun represents repository age.
 
 ### Visual Mass (for LensPass)
 ```
-mass = clamp(radius * (1 + log10(totalCommits + 1)), 0.5, 100.0)
+mass = clamp(radius * (1 + log10(size)), 0.5, 100.0)
 ```
 Mass affects the gravitational lensing effect in the background.
 
-### Ring Dimensions (FIX: outside planet)
+### Branch Orbit Dimensions
 ```
-ringInnerGap = max(planetRadiusWorld * 0.05, 0.5)
-ringThickness = clamp(branchesCount * 0.2, 0.5, 6.0)
-ringInnerRadius = planetRadiusWorld + ringInnerGap
-ringOuterRadius = ringInnerRadius + ringThickness
+branchBaseGap = max(planetRadius * 0.15, 1.0)
+branchSpacing = max(planetRadius * 0.12, 0.8)
+branchOrbitRadius_i = planetRadius + branchBaseGap + i * branchSpacing
+branchSize = clamp(log2(branchesCount) * 0.4, 0.2, planetRadius * 0.4)
 ```
+Branches are rendered as orbital spheres around the planet.
 
-### Moon Orbits (FIX: outside rings)
+### Halo Intensity
 ```
-moonBaseGap = max(planetRadiusWorld * 0.15, 1.0)
-moonSpacing = max(planetRadiusWorld * 0.12, 0.8)
-moonOrbitRadius_i = ringOuterRadius + moonBaseGap + i * moonSpacing
-moonSize = clamp(log2(forks+1) * 0.4, 0.2, planetRadiusWorld * 0.4)
+haloIntensity = clamp(log10(stars) * 0.6, 0.1, 3.0)
 ```
+🚧 Planned for future updates - Currently calculated but not used in rendering.
+
+### Number of Moons
+```
+numMoons = min(round(log2(forks + 1)), 8)
+```
+🚧 Planned for future updates - Moons will represent repository forks.
 
 ## 🎨 Features
 
@@ -136,10 +114,10 @@ moonSize = clamp(log2(forks+1) * 0.4, 0.2, planetRadiusWorld * 0.4)
 
 ### GitHub Rate Limit
 
-If you reach the GitHub public API rate-limit:
+If you reach the GitHub public API rate-limit (60 requests/hour per IP):
 - The application will display a warning banner
 - It will automatically use mock data for the demo
-- You can use an optional token to increase the limit
+- Wait an hour for the rate limit to reset, or try from a different network
 
 ### WebGL Not Supported
 

@@ -39,9 +39,7 @@ export class RepositoryCache {
       
       if (!data.basic || !data.basic.repos) return null;
       
-      // Check if expired
       if (this.isExpired(data.basic.timestamp, BASIC_TTL)) {
-        // Remove expired cache
         this.clearBasicRepos(username);
         return null;
       }
@@ -63,13 +61,11 @@ export class RepositoryCache {
       const key = this.getCacheKey(username);
       let data = {};
       
-      // Try to get existing cache
       const existing = localStorage.getItem(key);
       if (existing) {
         data = JSON.parse(existing);
       }
       
-      // Update basic repos
       data.basic = {
         repos: repos,
         timestamp: Date.now(),
@@ -79,7 +75,6 @@ export class RepositoryCache {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
       console.warn('[Cache] Error caching basic repos:', error);
-      // localStorage might be full, try to clear old entries
       this.clearOldCaches();
     }
   }
@@ -103,9 +98,7 @@ export class RepositoryCache {
       
       const repoData = data.detailed[repoName];
       
-      // Check if expired
       if (this.isExpired(repoData.timestamp, DETAILED_TTL)) {
-        // Remove expired entry
         delete data.detailed[repoName];
         localStorage.setItem(key, JSON.stringify(data));
         return null;
@@ -134,18 +127,15 @@ export class RepositoryCache {
       const key = this.getCacheKey(username);
       let data = {};
       
-      // Try to get existing cache
       const existing = localStorage.getItem(key);
       if (existing) {
         data = JSON.parse(existing);
       }
       
-      // Initialize detailed object if needed
       if (!data.detailed) {
         data.detailed = {};
       }
       
-      // Update detailed data for this repo
       data.detailed[repoName] = {
         ...detailedData,
         timestamp: Date.now(),
@@ -155,7 +145,6 @@ export class RepositoryCache {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
       console.warn(`[Cache] Error caching detailed data for ${repoName}:`, error);
-      // localStorage might be full
       this.clearOldCaches();
     }
   }
@@ -177,9 +166,7 @@ export class RepositoryCache {
       if (!data.detailed) return {};
       
       const result = {};
-      const now = Date.now();
       
-      // Filter out expired entries
       for (const [repoName, repoData] of Object.entries(data.detailed)) {
         if (!this.isExpired(repoData.timestamp, DETAILED_TTL)) {
           result[repoName] = {
@@ -191,7 +178,6 @@ export class RepositoryCache {
         }
       }
       
-      // Update cache if we removed expired entries
       if (Object.keys(result).length !== Object.keys(data.detailed).length) {
         data.detailed = result;
         localStorage.setItem(key, JSON.stringify(data));
@@ -249,7 +235,6 @@ export class RepositoryCache {
         if (key && key.startsWith(CACHE_PREFIX)) {
           try {
             const data = JSON.parse(localStorage.getItem(key));
-            // Check if both basic and detailed are expired
             const basicExpired = !data.basic || this.isExpired(data.basic.timestamp, BASIC_TTL);
             const detailedExpired = !data.detailed || Object.keys(data.detailed).length === 0 ||
               Object.values(data.detailed).every(d => this.isExpired(d.timestamp, DETAILED_TTL));
@@ -258,7 +243,6 @@ export class RepositoryCache {
               localStorage.removeItem(key);
             }
           } catch (e) {
-            // Invalid cache entry, remove it
             localStorage.removeItem(key);
           }
         }

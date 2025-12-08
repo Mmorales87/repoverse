@@ -64,7 +64,6 @@ function log2(x) {
  * EXACT FORMULA: radius = clamp( log10(size + 1) * 0.5, 1.6, 18.0 )
  */
 export function calculatePlanetRadius(size) {
-  // Size is in KB, use logarithmic scale with appropriate factor
   return clamp(log10(size) * 1.5, 1.6, 18.0);
 }
 
@@ -80,7 +79,6 @@ export function calculateHaloIntensity(stars) {
  * Always show at least 1 (main/master), up to branchesCount (max 8 for performance)
  */
 export function calculateNumBranches(branchesCount) {
-  // Ensure at least 1 branch (main/master), but don't exceed actual count or 8
   return Math.min(Math.max(1, branchesCount), 8);
 }
 
@@ -109,32 +107,24 @@ export function calculateOrbitalSpeed(commitsLast30, maxCommitsLast30) {
  * @param {number} maxEccentricity - Maximum eccentricity expected (default: 0.15)
  */
 export function calculateOrbitalRadius(daysSinceCreationAtSnapshot, index, ageMapping = 'older-farther', baseRadius = 30, ageFactor = 0.5, sunSize = 0, planetRadius = 0, maxEccentricity = 0.15) {
-  // Base radius from age
   let ageBasedRadius = baseRadius + ageFactor * Math.sqrt(daysSinceCreationAtSnapshot);
   
-  // Apply age mapping
   if (ageMapping === 'older-closer') {
-    // Invert: older repos closer to sun
-    const maxDays = 365 * 10; // Assume max 10 years for normalization
+    const maxDays = 365 * 10;
     const normalizedAge = Math.min(daysSinceCreationAtSnapshot / maxDays, 1.0);
     ageBasedRadius = baseRadius + ageFactor * Math.sqrt(maxDays) * (1.0 - normalizedAge);
   }
   
-  // Ensure minimum distance from sun (sun size + margin)
-  const minDistanceFromSun = sunSize + 15; // Sun radius + safe margin
+  const minDistanceFromSun = sunSize + 15;
   if (ageBasedRadius < minDistanceFromSun) {
     ageBasedRadius = minDistanceFromSun;
   }
   
-  // Add spacing based on index to ensure unique orbits and prevent collisions
-  // Consider maximum orbital radius (apoapsis) when eccentricity is applied
-  const maxEccentricityFactor = 1 + maxEccentricity; // e.g., 1.05 for 5% max eccentricity
-  const baseSpacing = Math.max(15, planetRadius * 2 * maxEccentricityFactor); // Base spacing considering max orbit radius
-  // Increase spacing multiplier for better distribution with many planets
-  const spacing = baseSpacing * 0.8; // Increased multiplier for better spacing
+  const maxEccentricityFactor = 1 + maxEccentricity;
+  const baseSpacing = Math.max(15, planetRadius * 2 * maxEccentricityFactor);
+  const spacing = baseSpacing * 0.8;
   const indexOffset = index * spacing;
   
-  // Final radius must account for the maximum reach of elliptical orbit
   const finalRadius = Math.max(ageBasedRadius + indexOffset, minDistanceFromSun + indexOffset);
   
   return finalRadius;
@@ -148,7 +138,7 @@ export function calculateMass(radius, size) {
 }
 
 /**
- * Calculate ring dimensions (FIX for bug: rings outside planet)
+ * Calculate branch orbit dimensions
  */
 export function calculateRingDimensions(planetRadius, branchesCount) {
   const ringInnerGap = Math.max(planetRadius * 0.05, 0.5);
@@ -202,35 +192,28 @@ export function calculateSunSize(sumStars) {
 export function generateSun(userData = {}, sumStars = 0) {
   const sunGroup = new THREE.Group();
   
-  // Calculate sun size based on total stars
   const sunSize = calculateSunSize(sumStars);
-  
-  // Main sun sphere
   const sunGeometry = new THREE.SphereGeometry(sunSize, 32, 32);
   
-  // Load sun texture (8K for best quality on central object)
   const textureLoader = new THREE.TextureLoader();
   let sunTexture = null;
   
   try {
-    // Load 8K texture (best quality for central object)
     sunTexture = textureLoader.load('/textures/8k_sun.jpg', 
       (texture) => {
-        // Texture loaded successfully
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.anisotropy = 16; // High quality filtering
+        texture.anisotropy = 16;
       },
       undefined,
       (error) => {
-        // If 8K fails, try 2K as fallback
         console.warn('[GENERATORS] 8K sun texture failed, trying 2K:', error);
         textureLoader.load('/textures/2k_sun.jpg',
           (texture) => {
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
             texture.anisotropy = 8;
-            sunTexture = texture; // Update reference
+            sunTexture = texture;
             sunMaterial.map = texture;
             sunMaterial.emissiveMap = texture;
             sunMaterial.needsUpdate = true;
@@ -250,22 +233,20 @@ export function generateSun(userData = {}, sumStars = 0) {
     color: 0xFFD700,
     emissive: 0xFFD700,
     emissiveIntensity: 0.8,
-    map: sunTexture || null, // Apply texture if loaded
-    emissiveMap: sunTexture || null // Use same texture for emission
+    map: sunTexture || null,
+    emissiveMap: sunTexture || null
   });
   
   const sun = new THREE.Mesh(sunGeometry, sunMaterial);
   sunGroup.add(sun);
   
-  // Subtle particles around sun (NOT satellites, just glow effect)
   const particleCount = 20;
   const particles = new THREE.BufferGeometry();
   const positions = new Float32Array(particleCount * 3);
   
   for (let i = 0; i < particleCount; i++) {
-    // Particles very close to sun surface, not orbiting
     const angle = (i / particleCount) * Math.PI * 2;
-    const radius = sunSize * 1.1 + Math.random() * 0.2; // Very close to sun
+    const radius = sunSize * 1.1 + Math.random() * 0.2;
     positions[i * 3] = Math.cos(angle) * radius;
     positions[i * 3 + 1] = Math.sin(angle) * radius;
     positions[i * 3 + 2] = (Math.random() - 0.5) * 1;
@@ -292,7 +273,7 @@ function hashString(str) {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   return Math.abs(hash);
 }
@@ -303,7 +284,6 @@ function hashString(str) {
 export function generatePlanet(repo, index) {
   const planetGroup = new THREE.Group();
   
-  // Use repository size (weight in KB) instead of totalCommits
   const size = repo.size || 0;
   const radius = calculatePlanetRadius(size);
   const geometry = new THREE.SphereGeometry(radius, 32, 32);
@@ -311,38 +291,32 @@ export function generatePlanet(repo, index) {
   const language = repo.language || 'Default';
   const color = getLanguageColor(language);
   
-  // Select texture deterministically based on repo name (1-8)
   const textureIndex = (hashString(repo.name) % 8) + 1;
   const texturePath = `/textures/2k_planet${textureIndex}.jpg`;
   
   const textureLoader = new THREE.TextureLoader();
   
-  // Create material with language color as base (not white, to avoid transparency)
-  // The texture will be applied on top with color multiplication
   const material = new THREE.MeshStandardMaterial({
-    color: color, // Language color as base (will be multiplied with texture)
-    emissive: color, // Language color as subtle emissive tint
-    emissiveIntensity: 1.4, // Subtle emissive glow
-    transparent: false, // Not transparent
-    opacity: 1.0 // Fully opaque
+    color: color,
+    emissive: color,
+    emissiveIntensity: 1.4,
+    transparent: false,
+    opacity: 1.0
   });
   
-  // Load texture and apply it (texture will tint the base color)
   textureLoader.load(
     texturePath,
     (texture) => {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
-      texture.anisotropy = 4; // Better texture quality
+      texture.anisotropy = 4;
       material.map = texture;
-      // Use texture as emissiveMap too for better visibility
       material.emissiveMap = texture;
       material.needsUpdate = true;
     },
     undefined,
     (error) => {
       console.warn(`[GENERATORS] Could not load planet texture ${textureIndex}:`, error);
-      // If texture fails, ensure material is still visible
       material.color.setHex(color);
       material.emissive.setHex(color);
     }
@@ -376,7 +350,6 @@ export function generateBranches(repo, planetRadius) {
   const defaultBranch = repo.defaultBranch || 'main';
   const textureLoader = new THREE.TextureLoader();
   
-  // Load moon texture - will be used for all branches
   let moonTexture = null;
   textureLoader.load(
     '/textures/2k_moon.jpg',
@@ -384,7 +357,6 @@ export function generateBranches(repo, planetRadius) {
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
       moonTexture = texture;
-      // Update all branch materials with texture
       branches.forEach((branch) => {
         if (branch.material) {
           branch.material.map = moonTexture;
@@ -400,32 +372,30 @@ export function generateBranches(repo, planetRadius) {
   );
   
   for (let i = 0; i < numBranches; i++) {
-    const isMainBranch = i === 0; // First branch is main/master
+    const isMainBranch = i === 0;
     const branchOrbitRadius = calculateBranchOrbitRadius(planetRadius, i);
     const branchSize = calculateBranchSize(branchesCount, planetRadius, isMainBranch);
     
     const geometry = new THREE.SphereGeometry(branchSize, 16, 16);
     
-    // Main/master branch: white/gold, brighter, with texture
-    // Other branches: grey, less bright, same texture but more muted
     let branchColor, emissiveIntensity, opacity;
     if (isMainBranch) {
-      branchColor = 0xFFF8DC; // Cornsilk/white-gold
+      branchColor = 0xFFF8DC;
       emissiveIntensity = 0.6;
       opacity = 1.0;
     } else {
-      branchColor = 0xAAAAAA; // Grey
+      branchColor = 0xAAAAAA;
       emissiveIntensity = 0.2;
-      opacity = 1.0; // More muted/appagada
+      opacity = 1.0;
     }
     
     const material = new THREE.MeshStandardMaterial({
       color: branchColor,
       emissive: branchColor,
       emissiveIntensity: emissiveIntensity,
-      map: moonTexture || null, // All branches use moon texture
+      map: moonTexture || null,
       emissiveMap: moonTexture || null,
-      transparent: !isMainBranch, // Other branches are semi-transparent
+      transparent: !isMainBranch,
       opacity: opacity
     });
     
@@ -450,11 +420,10 @@ export function generateBranches(repo, planetRadius) {
  */
 export function generatePRs(repo, planetRadius, numBranches) {
   const prs = [];
-  const prCount = Math.min(repo.openPRs || 0, 10); // Cap at 10 for performance
+  const prCount = Math.min(repo.openPRs || 0, 10);
   
   if (prCount === 0) return prs;
   
-  // Calculate orbit radius (outside branches)
   const lastBranchOrbitRadius = numBranches > 0 
     ? calculateBranchOrbitRadius(planetRadius, numBranches - 1)
     : planetRadius;
@@ -464,7 +433,6 @@ export function generatePRs(repo, planetRadius, numBranches) {
   const loader = new GLTFLoader();
   const prSize = 1.5;
   
-  // Load model once and clone for each PR
   let modelCache = null;
   let loadPromise = null;
   
@@ -489,52 +457,40 @@ export function generatePRs(repo, planetRadius, numBranches) {
     return loadPromise;
   };
   
-  // Create PRs with async model loading
   for (let i = 0; i < prCount; i++) {
     const prState = repo.prStates && repo.prStates[i] ? repo.prStates[i] : 'open';
-    /* let prColor = 0xFFA500; // Orange for open */
     
-    // Create PR object (will be updated when model loads)
     const prGroup = new THREE.Group();
     
-    // Fallback geometry if model fails
     const fallbackGeometry = new THREE.SphereGeometry(prSize, 8, 8);
     const fallbackMaterial = new THREE.MeshStandardMaterial({
-      /* color: prColor,
-      emissive: prColor, */
       emissiveIntensity: 0.8
     });
     const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
     prGroup.add(fallbackMesh);
     
-    // Try to load and apply model
     loadModel().then((gltf) => {
       if (gltf && modelCache) {
-        // Remove fallback
         prGroup.remove(fallbackMesh);
         fallbackGeometry.dispose();
         fallbackMaterial.dispose();
         
-        // Clone model
         const prModel = modelCache.clone();
         
-        // Preserve original colors and textures, but add emission for visibility (like decorative rocket)
         prModel.traverse((child) => {
           if (child.isMesh && child.material) {
             const materials = Array.isArray(child.material) ? child.material : [child.material];
             materials.forEach((mat) => {
-              // Preserve original color but add emission for visibility
               if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
                 const originalColor = mat.color ? mat.color.getHex() : 0xFFFFFF;
                 mat.color.setHex(originalColor);
                 mat.emissive.setHex(originalColor);
-                mat.emissiveIntensity = 0.5; // Make it glow so it's visible
+                mat.emissiveIntensity = 0.5;
               }
             });
           }
         });
         
-        // Scale model to appropriate size
         const box = new THREE.Box3().setFromObject(prModel);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
@@ -548,7 +504,7 @@ export function generatePRs(repo, planetRadius, numBranches) {
     prGroup.userData = {
       type: 'pr',
       index: i,
-      orbitRadius: prOrbitRadius + i * 0.3, // Slight spacing
+      orbitRadius: prOrbitRadius + i * 0.3,
       orbitSpeed: 1.5 / Math.sqrt(prOrbitRadius),
       state: prState
     };
@@ -567,37 +523,32 @@ export function generatePRs(repo, planetRadius, numBranches) {
 export function generateComets(repo, planetRadius, orbitalRadius) {
   const comets = [];
   
-  // Check if repo has recent commits
   if (!repo.hasRecentCommits) return comets;
   
-  // Create a single rocket/comet per repo with recent activity
   const cometGroup = new THREE.Group();
   
   const loader = new GLTFLoader();
-  const cometSize = 2.9; // Size of the rocket
+  const cometSize = 2.9;
   
-  // Load rocket model
   loader.load(
     '/models/comets.glb',
     (gltf) => {
       const rocketModel = gltf.scene;
       
-      // Scale model to appropriate size
       const box = new THREE.Box3().setFromObject(rocketModel);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = cometSize / maxDim;
       rocketModel.scale.set(scale, scale, scale);
       
-      // Make all materials transparent initially (will fade in)
       rocketModel.traverse((child) => {
         if (child.isMesh && child.material) {
           const materials = Array.isArray(child.material) ? child.material : [child.material];
           materials.forEach((mat) => {
             if (mat.transparent !== undefined) {
               mat.transparent = true;
-              mat.opacity = 0.0; // Start invisible
-              mat.userData.baseOpacity = 1.0; // Store base opacity
+              mat.opacity = 0.0;
+              mat.userData.baseOpacity = 1.0;
             }
           });
         }
@@ -608,10 +559,9 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
     undefined,
     (error) => {
       console.warn('[GENERATORS] Could not load rocket model, using fallback:', error);
-      // Fallback: simple sphere if model fails
       const fallbackGeometry = new THREE.SphereGeometry(cometSize * 0.5, 16, 16);
       const fallbackMaterial = new THREE.MeshStandardMaterial({
-        color: 0xFF6B35, // Orange-red like rocket
+        color: 0xFF6B35,
         emissive: 0xFF6B35,
         emissiveIntensity: 0.8,
         transparent: true,
@@ -623,24 +573,22 @@ export function generateComets(repo, planetRadius, orbitalRadius) {
     }
   );
   
-  // Calculate comet orbit (highly elliptical, crosses the system)
-  // Make it travel across the entire system, not just around one planet
-  const cometOrbitRadius = orbitalRadius * 2.0; // Far out to cross system
-  const cometEccentricity = 0.9; // Very high eccentricity for crossing trajectory
+  const cometOrbitRadius = orbitalRadius * 2.0;
+  const cometEccentricity = 0.9;
   
   cometGroup.userData = {
     type: 'comet',
     orbitRadius: cometOrbitRadius,
     eccentricity: cometEccentricity,
-    orbitSpeed: 1.2 / Math.sqrt(cometOrbitRadius), // Faster to cross quickly
-    fadeInTime: 1.5, // 1.5 seconds to fade in
-    fadeOutTime: 1.5, // 1.5 seconds to fade out
-    visibleDuration: 18.0, // Visible for 8 seconds total
+    orbitSpeed: 1.2 / Math.sqrt(cometOrbitRadius),
+    fadeInTime: 1.5,
+    fadeOutTime: 1.5,
+    visibleDuration: 18.0,
     isVisible: true,
-    shouldRemove: false, // Flag to remove from scene
-    opacity: 1, // Start invisible, will fade in
+    shouldRemove: false,
+    opacity: 1,
     createdAt: Date.now(),
-    repoName: repo.name // Store repo name to check if still recent
+    repoName: repo.name
   };
   
   comets.push(cometGroup);
@@ -672,13 +620,11 @@ export function generateDecorativeRocket() {
         if (child.isMesh && child.material) {
           const materials = Array.isArray(child.material) ? child.material : [child.material];
           materials.forEach((mat) => {
-            // Make material visible with emission (like PRs)
             if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
-              // Preserve original color but add emission for visibility
               const originalColor = mat.color ? mat.color.getHex() : 0xFFFFFF;
               mat.color.setHex(originalColor);
               mat.emissive.setHex(originalColor);
-              mat.emissiveIntensity = 0.5; // Make it glow so it's visible
+              mat.emissiveIntensity = 0.5;
             }
             if (mat.transparent !== undefined) {
               mat.transparent = true;
@@ -694,7 +640,6 @@ export function generateDecorativeRocket() {
     undefined,
     (error) => {
       console.warn('[GENERATORS] Could not load decorative rocket:', error);
-      // Fallback
       const fallbackGeometry = new THREE.SphereGeometry(rocketSize * 0.5, 16, 16);
       const fallbackMaterial = new THREE.MeshStandardMaterial({
         color: 0xFF6B35,
@@ -709,24 +654,22 @@ export function generateDecorativeRocket() {
     }
   );
   
-  // Random starting position and trajectory - MUY ALEJADO del centro para evitar planetas
   const startAngle = Math.random() * Math.PI * 2;
-  const orbitRadius = 150 + Math.random() * 80; // Mucho más lejos del centro (150-230)
-  const eccentricity = 0.7 + Math.random() * 0.2; // Menos excéntrico para trayectorias más suaves
+  const orbitRadius = 150 + Math.random() * 80;
+  const eccentricity = 0.7 + Math.random() * 0.2;
   
-  // Altura vertical aleatoria para evitar el plano orbital de los planetas
-  const verticalOffset = (Math.random() - 0.5) * 60; // -30 a +30 en Y
+  const verticalOffset = (Math.random() - 0.5) * 60;
   
   rocketGroup.userData = {
     type: 'decorativeRocket',
     startAngle: startAngle,
     orbitRadius: orbitRadius,
     eccentricity: eccentricity,
-    verticalOffset: verticalOffset, // Altura para evitar planetas
-    orbitSpeed: (0.3 + Math.random() * 0.5) / Math.sqrt(orbitRadius), // Más lento
+    verticalOffset: verticalOffset,
+    orbitSpeed: (0.3 + Math.random() * 0.5) / Math.sqrt(orbitRadius),
     fadeInTime: 2.0,
     fadeOutTime: 2.0,
-    visibleDuration: 20.0 + Math.random() * 15.0, // 20-35 seconds
+    visibleDuration: 20.0 + Math.random() * 15.0,
     createdAt: Date.now(),
     shouldRemove: false
   };
@@ -753,20 +696,17 @@ export function generateOrbitLine(orbitalRadius, eccentricity = 0, inclination =
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
     
-    // Apply eccentricity (elliptical orbit)
     const radius = orbitalRadius * (1 + eccentricity * Math.cos(angle));
     
-    // Calculate position in horizontal plane (XZ) - NO vertical component
     const x = radius * Math.cos(angle);
     const z = radius * Math.sin(angle);
-    const y = 0; // All orbits in horizontal plane
+    const y = 0;
     
     points.push(new THREE.Vector3(x, y, z));
   }
   
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   
-  // Thin, almost transparent line material
   const material = new THREE.LineBasicMaterial({
     color: 0xF5F5F5,
     opacity: 0.2,
