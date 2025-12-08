@@ -305,13 +305,19 @@ export class HUDManager {
             <td style="padding: 10px;">Orbital speed ➰</td>
             <td style="padding: 10px;">Repositories with most commits in last 30 days orbit faster around the sun</td>
           </tr>
+          <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <td style="padding: 10px; font-weight: bold;">Forks</td>
+            <td style="padding: 10px;">Planets 🌍 with ISS 🛰️</td>
+            <td style="padding: 10px;">Forks appear as planets in shared orbit, each with an ISS orbiting around it</td>
+          </tr>
           <tr>
             <td style="padding: 10px; font-weight: bold;">Age</td>
             <td style="padding: 10px;">Orbital radius</td>
             <td style="padding: 10px;">Relative age of the repo</td>
           </tr>
-        </tbody>
-      </table>
+          </tbody>
+          </table>
+          <p style="font-size: 12px; color:rgb(255, 115, 100); padding-top: 10px;">* If you continue seeing active PRs, rockets etc, do a hard refresh to clear the cache</p>
     `;
     
     // Close button handler

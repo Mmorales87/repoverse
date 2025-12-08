@@ -155,9 +155,17 @@ export function calculateRingDimensions(planetRadius, branchesCount) {
 
 /**
  * Calculate branch orbit radius
+ * @param {number} planetRadius - Radius of the planet
+ * @param {number} branchIndex - Index of the branch
+ * @param {boolean} isFork - Whether this is a fork repository (branches need to be further to avoid ISS)
  */
-export function calculateBranchOrbitRadius(planetRadius, branchIndex) {
-  const branchBaseGap = Math.max(planetRadius * 0.15, 1.0);
+export function calculateBranchOrbitRadius(planetRadius, branchIndex, isFork = false) {
+  // For forks, increase base gap to ensure branches are beyond ISS orbit
+  // ISS orbits at: planetRadius + max(planetRadius * 0.2, 1.5)
+  // So we need branches to start beyond that
+  const issOrbitRadius = planetRadius + Math.max(planetRadius * 0.2, 1.5);
+  const minBranchGap = isFork ? issOrbitRadius - planetRadius + 1.5 : Math.max(planetRadius * 0.15, 1.0);
+  const branchBaseGap = Math.max(minBranchGap, planetRadius * 0.15);
   const branchSpacing = Math.max(planetRadius * 0.12, 0.8);
   return planetRadius + branchBaseGap + branchIndex * branchSpacing;
 }
@@ -339,8 +347,11 @@ export function generatePlanet(repo, index) {
  * Generate branches for repository (branches)
  * Main/master branch is larger, brighter, and has moon texture
  * All branches use moon texture, but main is brighter
+ * @param {Object} repo - Repository data
+ * @param {number} planetRadius - Radius of the planet
+ * @param {boolean} isFork - Whether this is a fork repository (branches will be further to avoid ISS)
  */
-export function generateBranches(repo, planetRadius) {
+export function generateBranches(repo, planetRadius, isFork = false) {
   const branches = [];
   const branchesCount = repo.branchesCount || 1;
   const numBranches = calculateNumBranches(branchesCount);
@@ -373,7 +384,7 @@ export function generateBranches(repo, planetRadius) {
   
   for (let i = 0; i < numBranches; i++) {
     const isMainBranch = i === 0;
-    const branchOrbitRadius = calculateBranchOrbitRadius(planetRadius, i);
+    const branchOrbitRadius = calculateBranchOrbitRadius(planetRadius, i, isFork);
     const branchSize = calculateBranchSize(branchesCount, planetRadius, isMainBranch);
     
     const geometry = new THREE.SphereGeometry(branchSize, 16, 16);
@@ -415,12 +426,288 @@ export function generateBranches(repo, planetRadius) {
 }
 
 /**
+ * Generate ISS (International Space Station) for fork repositories
+ * ISS orbits close to the fork planet
+ * @param {number} planetRadius - Radius of the planet
+ * @returns {THREE.Group} - ISS group with orbit data
+ */
+export function generateISS(planetRadius) {
+  const issGroup = new THREE.Group();
+  
+  // Calculate ISS size proportional to planet (similar to branches)
+  const issSize = Math.max(planetRadius * 0.3, 0.8);
+  const issOrbitRadius = planetRadius + Math.max(planetRadius * 0.2, 1.5);
+  
+  const loader = new GLTFLoader();
+  
+  // Create fallback geometric ISS (cylinders and spheres)
+  const createFallbackISS = () => {
+    const fallbackGroup = new THREE.Group();
+    
+    // Central body (main cylinder)
+    const centralGeometry = new THREE.CylinderGeometry(issSize * 0.3, issSize * 0.3, issSize * 0.8, 8);
+    const centralMaterial = new THREE.MeshStandardMaterial({
+      color: 0xCCCCCC,
+      emissive: 0xCCCCCC,
+      emissiveIntensity: 0.6,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    const centralBody = new THREE.Mesh(centralGeometry, centralMaterial);
+    fallbackGroup.add(centralBody);
+    
+    // Solar panels (4 cylinders on sides)
+    const panelGeometry = new THREE.BoxGeometry(issSize * 0.6, issSize * 0.1, issSize * 0.3);
+    const panelMaterial = new THREE.MeshStandardMaterial({
+      color: 0x0066CC,
+      emissive: 0x0066CC,
+      emissiveIntensity: 0.4,
+      metalness: 0.9,
+      roughness: 0.1
+    });
+    
+    // Add 4 solar panels
+    const panelPositions = [
+      { x: issSize * 0.5, y: 0, z: 0 },
+      { x: -issSize * 0.5, y: 0, z: 0 },
+      { x: 0, y: 0, z: issSize * 0.5 },
+      { x: 0, y: 0, z: -issSize * 0.5 }
+    ];
+    
+    panelPositions.forEach(pos => {
+      const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+      panel.position.set(pos.x, pos.y, pos.z);
+      fallbackGroup.add(panel);
+    });
+    
+    return fallbackGroup;
+  };
+  
+  // Add fallback immediately
+  const fallbackISS = createFallbackISS();
+  issGroup.add(fallbackISS);
+  
+  // Try to load GLTF model
+  loader.load(
+    `${import.meta.env.BASE_URL}models/iss.glb`,
+    (gltf) => {
+      const issModel = gltf.scene;
+      
+      // Calculate scale
+      const box = new THREE.Box3().setFromObject(issModel);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = issSize / maxDim;
+      issModel.scale.set(scale, scale, scale);
+      
+      // Apply materials with emission
+      issModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
+              const originalColor = mat.color ? mat.color.getHex() : 0xCCCCCC;
+              mat.color.setHex(originalColor);
+              mat.emissive.setHex(originalColor);
+              mat.emissiveIntensity = 0.5;
+            }
+          });
+        }
+      });
+      
+      // Remove fallback and add model
+      issGroup.remove(fallbackISS);
+      fallbackISS.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+      
+      issGroup.add(issModel);
+    },
+    undefined,
+    (error) => {
+      console.warn('[GENERATORS] Could not load ISS model, using fallback:', error);
+      // Fallback already added, no need to do anything
+    }
+  );
+  
+  // Store orbit data for animation
+  issGroup.userData = {
+    type: 'iss',
+    orbitRadius: issOrbitRadius,
+    orbitSpeed: 1.2 / Math.sqrt(issOrbitRadius),
+    initialAngle: Math.random() * Math.PI * 2
+  };
+  
+  return issGroup;
+}
+
+/**
+ * Generate astronaut connecting fork to original repository
+ * Astronaut moves in elliptical trajectory between fork and original planets
+ * @param {THREE.Group} forkPlanet - The fork planet group
+ * @param {THREE.Group} originalPlanet - The original planet group
+ * @param {Object} forkRepo - Fork repository data
+ * @param {Object} originalRepo - Original repository data
+ * @returns {THREE.Group} - Astronaut group with animation data
+ */
+export function generateAstronaut(forkPlanet, originalPlanet, forkRepo, originalRepo) {
+  const astronautGroup = new THREE.Group();
+  
+  // Calculate astronaut size
+  const astronautSize = 1.2;
+  
+  const loader = new GLTFLoader();
+  
+  // Create fallback geometric astronaut
+  const createFallbackAstronaut = () => {
+    const fallbackGroup = new THREE.Group();
+    
+    // Body (sphere)
+    const bodyGeometry = new THREE.SphereGeometry(astronautSize * 0.4, 16, 16);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0xFFFFFF,
+      emissive: 0xFFFFFF,
+      emissiveIntensity: 0.5,
+      metalness: 0.3,
+      roughness: 0.7
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    fallbackGroup.add(body);
+    
+    // Helmet (larger sphere on top)
+    const helmetGeometry = new THREE.SphereGeometry(astronautSize * 0.35, 16, 16);
+    const helmetMaterial = new THREE.MeshStandardMaterial({
+      color: 0xCCCCCC,
+      emissive: 0xCCCCCC,
+      emissiveIntensity: 0.6,
+      metalness: 0.8,
+      roughness: 0.2,
+      transparent: true,
+      opacity: 0.7
+    });
+    const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+    helmet.position.y = astronautSize * 0.35;
+    fallbackGroup.add(helmet);
+    
+    // Arms (cylinders)
+    const armGeometry = new THREE.CylinderGeometry(astronautSize * 0.08, astronautSize * 0.08, astronautSize * 0.5, 8);
+    const armMaterial = new THREE.MeshStandardMaterial({
+      color: 0xFFFFFF,
+      emissive: 0xFFFFFF,
+      emissiveIntensity: 0.4
+    });
+    
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    leftArm.position.set(-astronautSize * 0.3, 0, 0);
+    leftArm.rotation.z = Math.PI / 6;
+    fallbackGroup.add(leftArm);
+    
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+    rightArm.position.set(astronautSize * 0.3, 0, 0);
+    rightArm.rotation.z = -Math.PI / 6;
+    fallbackGroup.add(rightArm);
+    
+    return fallbackGroup;
+  };
+  
+  // Add fallback immediately
+  const fallbackAstronaut = createFallbackAstronaut();
+  astronautGroup.add(fallbackAstronaut);
+  
+  // Try to load GLTF model
+  loader.load(
+    `${import.meta.env.BASE_URL}models/astronaut-to-iss.glb`,
+    (gltf) => {
+      const astronautModel = gltf.scene;
+      
+      // Calculate scale
+      const box = new THREE.Box3().setFromObject(astronautModel);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = astronautSize / maxDim;
+      astronautModel.scale.set(scale, scale, scale);
+      
+      // Apply materials with emission
+      astronautModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat.isMeshStandardMaterial || mat.isMeshPhongMaterial || mat.isMeshBasicMaterial) {
+              const originalColor = mat.color ? mat.color.getHex() : 0xFFFFFF;
+              mat.color.setHex(originalColor);
+              mat.emissive.setHex(originalColor);
+              mat.emissiveIntensity = 0.5;
+            }
+          });
+        }
+      });
+      
+      // Remove fallback and add model
+      astronautGroup.remove(fallbackAstronaut);
+      fallbackAstronaut.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+      
+      astronautGroup.add(astronautModel);
+    },
+    undefined,
+    (error) => {
+      console.warn('[GENERATORS] Could not load astronaut model, using fallback:', error);
+      // Fallback already added, no need to do anything
+    }
+  );
+  
+  // Calculate positions for trajectory
+  const forkPosition = new THREE.Vector3();
+  const originalPosition = new THREE.Vector3();
+  forkPlanet.getWorldPosition(forkPosition);
+  originalPlanet.getWorldPosition(originalPosition);
+  
+  // Calculate midpoint and distance
+  const midpoint = new THREE.Vector3().addVectors(forkPosition, originalPosition).multiplyScalar(0.5);
+  const distance = forkPosition.distanceTo(originalPosition);
+  
+  // Store animation data for elliptical trajectory
+  astronautGroup.userData = {
+    type: 'astronaut',
+    forkPlanet: forkPlanet,
+    originalPlanet: originalPlanet,
+    forkPosition: forkPosition.clone(),
+    originalPosition: originalPosition.clone(),
+    midpoint: midpoint,
+    distance: distance,
+    orbitSpeed: 0.3 / Math.sqrt(distance), // Slower for longer distances
+    currentAngle: 0,
+    eccentricity: 0.3 // Elliptical path
+  };
+  
+  // Set initial position at midpoint
+  astronautGroup.position.copy(midpoint);
+  
+  return astronautGroup;
+}
+
+/**
  * Generate PRs as GLTF models (spaceships)
  * Colors: open=orange, merged=green, closed=grey
  */
 export function generatePRs(repo, planetRadius, numBranches) {
   const prs = [];
-  const prCount = Math.min(repo.openPRs || 0, 10);
+  const prCount = Math.min(repo.openPRs || 0, 6);
   
   if (prCount === 0) return prs;
   
