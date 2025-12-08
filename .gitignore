@@ -28,3 +28,6 @@ yarn-debug.log*
 yarn-error.log*
 
 forks.md
+
+# Assets no usados (capturas y texturas duplicadas)
+assets/

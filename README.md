@@ -172,6 +172,37 @@ npm run preview
 - No framework dependencies (vanilla JavaScript)
 - Compatible with modern browsers (Chrome, Firefox, Safari, Edge)
 
+## 🌐 GitHub Pages
+
+This project is configured to deploy automatically to GitHub Pages using GitHub Actions.
+
+### Automatic Deployment
+
+The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically builds and deploys the site when you push to the `main` or `master` branch.
+
+**To enable GitHub Pages:**
+
+1. Go to your repository settings on GitHub
+2. Navigate to **Pages** in the left sidebar
+3. Under **Source**, select **GitHub Actions**
+4. The site will be available at: `https://[your-username].github.io/repoverse/`
+
+### Manual Deployment
+
+If you prefer to deploy manually:
+
+```bash
+# Build the project
+npm run build
+
+# The dist/ folder contains the built files
+# Upload the contents of dist/ to your GitHub Pages branch
+```
+
+### Configuration
+
+The base path is configured in `vite.config.js`. If your repository name is different from `repoverse`, update the `REPO_NAME` variable in the config file.
+
 ## 📄 License
 
 This project is part of RepoVerse.
