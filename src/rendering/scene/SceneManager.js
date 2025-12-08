@@ -62,6 +62,9 @@ export class SceneManager {
     this.topKPlanets = [];
     this.K = 8;
     
+    // Animation pause state
+    this.isPaused = false;
+    
     this.initialized = false;
   }
 
@@ -499,10 +502,32 @@ export class SceneManager {
   }
 
   /**
+   * Pause animations
+   */
+  pause() {
+    this.isPaused = true;
+  }
+
+  /**
+   * Resume animations
+   */
+  resume() {
+    this.isPaused = false;
+  }
+
+  /**
    * Update animation
    */
   update() {
     if (!this.initialized) return;
+    
+    // If paused, only update camera controls, not animations
+    if (this.isPaused) {
+      if (this.controls) {
+        this.controls.update();
+      }
+      return;
+    }
     
     const deltaTime = this.clock.getDelta();
     const elapsedTime = this.clock.getElapsedTime();
