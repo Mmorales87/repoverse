@@ -14,7 +14,8 @@ import {
   calculateOrbitalSpeed,
   calculateRingDimensions,
   generateOrbitLine,
-  calculateSunSize
+  calculateSunSize,
+  initializeTexturePreloading
 } from './Generators.js';
 
 // Helper functions
@@ -105,6 +106,9 @@ export class SceneManager {
     
     // Create skybox (3D sphere)
     this.createSkybox();
+    
+    // Pre-load common textures for better performance
+    initializeTexturePreloading();
     
     // Handle resize
     window.addEventListener('resize', () => this.handleResize());

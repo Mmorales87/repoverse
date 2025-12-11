@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { 
+  loadEnhancedTextureSet, 
+  getEnhancedMaterialByIndex,
+  hasEnhancedMaterials,
+  loadFallbackTexture,
+  getAvailableMaterials
+} from '../utils/TextureUtils.js';
+import { PlanetMaterial } from '../materials/PlanetMaterial.js';
 
 /**
  * Language color palette
@@ -287,6 +295,61 @@ function hashString(str) {
 }
 
 /**
+ * Cache for base materials (one per texture set)
+ * Key: material name or texture index
+ * Value: MeshStandardMaterial instance (base, without language color)
+ */
+const materialCache = new Map();
+
+/**
+ * Cache for geometries (reuse geometries of same size/segments)
+ * Key: "radius_segments" (e.g., "5.2_32")
+ * Value: THREE.SphereGeometry instance
+ */
+const geometryCache = new Map();
+
+/**
+ * Texture loader instance (shared)
+ */
+const textureLoader = new THREE.TextureLoader();
+
+/**
+ * Initialize texture pre-loading for better performance
+ * Call this once at startup
+ */
+export function initializeTexturePreloading() {
+  // Pre-load common fallback textures
+  import('../utils/TextureUtils.js').then(({ preloadCommonTextures }) => {
+    preloadCommonTextures(textureLoader);
+  });
+}
+
+/**
+ * Calculate optimal segments based on planet size
+ * Smaller planets need less detail for performance
+ * @param {number} radius - Planet radius
+ * @param {boolean} useEnhanced - Whether using enhanced textures
+ * @returns {number} Optimal segment count
+ */
+function calculateOptimalSegments(radius, useEnhanced) {
+  if (!useEnhanced) {
+    return 32; // Standard detail for fallback textures
+  }
+  
+  // Enhanced textures: scale segments with radius for better detail
+  // Small planets (< 3): 32 segments (good performance)
+  // Medium planets (3-8): 48 segments (balanced)
+  // Large planets (> 8): 64 segments (maximum detail)
+  if (radius < 3) {
+    return 32;
+  } else if (radius < 8) {
+    return 48;
+  } else {
+    return 64;
+  }
+}
+
+/**
  * Generate planet for repository
  */
 export function generatePlanet(repo, index) {
@@ -294,41 +357,113 @@ export function generatePlanet(repo, index) {
   
   const size = repo.size || 0;
   const radius = calculatePlanetRadius(size);
-  const geometry = new THREE.SphereGeometry(radius, 32, 32);
   
   const language = repo.language || 'Default';
   const color = getLanguageColor(language);
+  const languageColor = new THREE.Color(color);
   
-  const textureIndex = (hashString(repo.name) % 8) + 1;
-  const texturePath = `${import.meta.env.BASE_URL}textures/2k_planet${textureIndex}.jpg`;
+  // Determine which texture/material to use
+  const hash = hashString(repo.name);
+  let useEnhanced = false;
+  let materialName = null;
+  let fallbackTextureIndex = (hash % 8) + 1;
   
-  const textureLoader = new THREE.TextureLoader();
+  // Try to use enhanced materials if available
+  if (hasEnhancedMaterials()) {
+    const availableMaterials = getAvailableMaterials();
+    const materialIndex = hash % availableMaterials.length;
+    materialName = getEnhancedMaterialByIndex(materialIndex);
+    useEnhanced = true;
+  }
   
+  // Calculate optimal segments based on planet size
+  const segments = calculateOptimalSegments(radius, useEnhanced);
+  
+  // Cache and reuse geometries of the same size/segments
+  const geometryKey = `${radius.toFixed(1)}_${segments}`;
+  let geometry = geometryCache.get(geometryKey);
+  
+  if (!geometry) {
+    geometry = new THREE.SphereGeometry(radius, segments, segments);
+    geometryCache.set(geometryKey, geometry);
+  }
+  
+  // Create material for this planet - load texture immediately for visibility
   const material = new THREE.MeshStandardMaterial({
-    color: color,
-    emissive: color,
-    emissiveIntensity: 1.4,
+    color: languageColor, // Start with language color as fallback
+    emissive: languageColor,
+    emissiveIntensity: 0.5, // Moderate emission
     transparent: false,
-    opacity: 1.0
+    opacity: 1.0,
+    metalness: 0.1,
+    roughness: 0.8
   });
   
-  textureLoader.load(
-    texturePath,
-    (texture) => {
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.anisotropy = 4;
+  // Load fallback texture - use pre-loaded if available, otherwise load
+  loadFallbackTexture(textureLoader, fallbackTextureIndex)
+    .then((texture) => {
+      // Texture might already be configured if pre-loaded
+      if (!texture.wrapS) {
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.anisotropy = 4;
+      }
       material.map = texture;
       material.emissiveMap = texture;
       material.needsUpdate = true;
-    },
-    undefined,
-    (error) => {
-      console.warn(`[GENERATORS] Could not load planet texture ${textureIndex}:`, error);
-      material.color.setHex(color);
-      material.emissive.setHex(color);
-    }
+    })
+    .catch((error) => {
+      console.warn(`[GENERATORS] Could not load fallback texture ${fallbackTextureIndex}:`, error);
+    });
+  
+  // Apply language tint to material
+  const tintIntensity = useEnhanced ? 0.25 : 0.3;
+  material.color = new THREE.Color().lerpColors(
+    new THREE.Color(0xffffff),
+    languageColor,
+    tintIntensity
   );
+  
+  // Lazy load enhanced textures - only load after a short delay to prioritize visible planets
+  // This prevents loading all textures at once, improving initial load time
+  if (useEnhanced && materialName) {
+    // Delay loading enhanced textures slightly to prioritize fallback textures
+    setTimeout(() => {
+      loadEnhancedTextureSet(materialName, textureLoader)
+        .then((textures) => {
+          if (textures.diffuse) {
+            material.map = textures.diffuse;
+            material.emissiveMap = textures.diffuse;
+          }
+          
+          if (textures.normal) {
+            material.normalMap = textures.normal;
+            material.normalScale = new THREE.Vector2(2.0, 2.0);
+          }
+          
+          if (textures.roughness) {
+            material.roughnessMap = textures.roughness;
+            material.roughness = 1.0;
+          }
+          
+          // Re-apply tint after texture load
+          material.color = new THREE.Color().lerpColors(
+            new THREE.Color(0xffffff),
+            languageColor,
+            0.25
+          );
+          
+          material.needsUpdate = true;
+        })
+        .catch((error) => {
+          // Silently fail - keep using fallback texture
+          // Only log in development
+          if (import.meta.env.DEV) {
+            console.warn(`[GENERATORS] Failed to load enhanced textures for ${materialName}:`, error);
+          }
+        });
+    }, index * 50); // Stagger loading: 50ms delay per planet index
+  }
   
   const planet = new THREE.Mesh(geometry, material);
   planet.userData = {
